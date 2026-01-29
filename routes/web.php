@@ -1,0 +1,120 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PetController;
+
+use App\Http\Controllers\AdoptionPublicController;
+use App\Http\Controllers\MyAdoptionController;
+use App\Http\Controllers\AdoptionRequestController;
+
+use App\Http\Controllers\Public\ServiceBrowserController;
+use App\Http\Controllers\AppointmentController;
+
+use App\Http\Controllers\SupportTicketController;
+
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\UserRoleController;
+use App\Http\Controllers\Admin\MedicalServiceController;
+use App\Http\Controllers\Admin\SupportTicketAdminController;
+
+use App\Http\Controllers\Vet\ClinicController;
+use App\Http\Controllers\Vet\ClinicServiceController;
+
+//HOME PÚBLICO
+Route::view('/', 'home')->name('home');
+
+//ADOPCIONES PÚBLICAS (solo ver)
+Route::get('/adoptions', [AdoptionPublicController::class, 'index'])->name('adoptions.index');
+Route::get('/adoptions/{post}', [AdoptionPublicController::class, 'show'])->name('adoptions.show');
+
+// SERVICIOS PÚBLICOS (explorar)
+Route::get('/services', [ServiceBrowserController::class, 'index'])->name('services.index');
+Route::get('/services/{service}/clinics', [ServiceBrowserController::class, 'clinics'])->name('services.clinics');
+
+// AUTH + VERIFIED (todo lo interno)
+Route::middleware(['auth', 'verified'])->group(function () {
+
+    Route::get('/dashboard', fn () => view('dashboard'))->name('dashboard');
+
+    // Perfil
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Mascotas (dueños)
+    Route::resource('pets', PetController::class);
+
+    // Mis publicaciones adopción (requiere login)
+    Route::get('/my/adoptions', [MyAdoptionController::class, 'index'])->name('myadoptions.index');
+    Route::get('/my/adoptions/create', [MyAdoptionController::class, 'create'])->name('myadoptions.create');
+    Route::post('/my/adoptions', [MyAdoptionController::class, 'store'])->name('myadoptions.store');
+    Route::patch('/my/adoptions/{post}/toggle', [MyAdoptionController::class, 'toggle'])->name('myadoptions.toggle');
+    Route::get('/my/adoptions/{post}/requests', [MyAdoptionController::class, 'requests'])->name('myadoptions.requests');
+
+    // Solicitudes adopción (requiere login)
+    Route::post('/adoptions/{post}/request', [AdoptionRequestController::class, 'store'])->name('adoptions.request.store');
+    Route::get('/my/requests', [AdoptionRequestController::class, 'myRequests'])->name('myrequests.index');
+    Route::patch('/requests/{adoptionRequest}/status', [AdoptionRequestController::class, 'setStatus'])->name('requests.status');
+
+    // Citas (ciudadano)
+    Route::get('/appointments/create/{clinic}/{service}', [AppointmentController::class, 'create'])->name('appointments.create');
+    Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
+    Route::get('/my/appointments', [AppointmentController::class, 'myAppointments'])->name('my.appointments');
+
+    // Tickets (usuario)
+    Route::get('/tickets', [SupportTicketController::class, 'index'])->name('tickets.index');
+    Route::get('/tickets/create', [SupportTicketController::class, 'create'])->name('tickets.create');
+    Route::post('/tickets', [SupportTicketController::class, 'store'])->name('tickets.store');
+    Route::get('/tickets/{ticket}', [SupportTicketController::class, 'show'])->name('tickets.show');
+
+    // ADMIN (un solo bloque)
+    Route::middleware(['role:admin'])
+        ->prefix('admin')
+        ->name('admin.')
+        ->group(function () {
+
+            Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+            // Usuarios/roles
+            Route::get('/users', [UserRoleController::class, 'index'])->name('users.index');
+            Route::get('/users/pending', [UserRoleController::class, 'pending'])->name('users.pending');
+            Route::get('/users/{user}/role', [UserRoleController::class, 'edit'])->name('users.role.edit');
+            Route::put('/users/{user}/role', [UserRoleController::class, 'update'])->name('users.role.update');
+            Route::put('/users/{user}/approve', [UserRoleController::class, 'approve'])->name('users.approve');
+            Route::put('/users/{user}/reject', [UserRoleController::class, 'reject'])->name('users.reject');
+            Route::get('/users/{user}/edit', [UserRoleController::class, 'editUser'])->name('users.edit');
+            Route::put('/users/{user}', [UserRoleController::class, 'updateUser'])->name('users.update');
+            Route::delete('/users/{user}', [UserRoleController::class, 'destroy'])->name('users.destroy');
+            Route::post('/users/{user}/restore', [UserRoleController::class, 'restore'])->name('users.restore');
+
+
+
+            // Servicios médicos CRUD
+            Route::resource('services', MedicalServiceController::class)->parameters(['services' => 'service']);
+
+            // Tickets admin
+            Route::get('/tickets', [SupportTicketAdminController::class, 'index'])->name('tickets.index');
+            Route::get('/tickets/{ticket}', [SupportTicketAdminController::class, 'show'])->name('tickets.show');
+            Route::post('/tickets/{ticket}/reply', [SupportTicketAdminController::class, 'reply'])->name('tickets.reply');
+            Route::post('/tickets/{ticket}/close', [SupportTicketAdminController::class, 'close'])->name('tickets.close');
+        });
+
+    //Veterinario
+    Route::middleware(['role:veterinario'])
+        ->prefix('vet')
+        ->name('vet.')
+        ->group(function () {
+            Route::resource('clinics', ClinicController::class);
+            Route::get('clinics/{clinic}/services', [ClinicServiceController::class, 'edit'])->name('clinics.services.edit');
+            Route::post('clinics/{clinic}/services', [ClinicServiceController::class, 'update'])->name('clinics.services.update');
+
+            Route::get('appointments', [AppointmentController::class, 'vetAppointments'])->name('appointments.index');
+            Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'setStatus'])->name('appointments.status');
+
+            Route::delete('/users/{user}', [UserRoleController::class, 'destroy'])->name('users.destroy');
+
+        });
+});
+
+require __DIR__.'/auth.php';
