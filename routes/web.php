@@ -18,6 +18,10 @@ use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\Admin\MedicalServiceController;
 use App\Http\Controllers\Admin\SupportTicketAdminController;
 
+// Ruta para el formulario de adopciones
+Route::get('/adopciones', function () {
+    return view('adopciones');
+});
 use App\Http\Controllers\Vet\ClinicController;
 use App\Http\Controllers\Vet\ClinicServiceController;
 
