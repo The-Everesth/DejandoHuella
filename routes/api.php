@@ -24,6 +24,7 @@ Route::prefix('adoptions')->group(function () {
     Route::get('/', [AdoptionsController::class, 'index']);
     Route::get('/{id}', [AdoptionsController::class, 'show']);
     Route::post('/', [AdoptionsController::class, 'store']);
+        Route::post('/firebase', [AdoptionsController::class, 'storeToFirebase']);
     Route::put('/{id}', [AdoptionsController::class, 'update']);
     Route::delete('/{id}', [AdoptionsController::class, 'destroy']);
 });

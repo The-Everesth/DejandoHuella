@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\SupportTicketAdminController;
 Route::get('/adopciones', function () {
     return view('adopciones');
 });
+Route::view('/adopciones-form', 'adopciones')->name('adopciones.form');
 use App\Http\Controllers\Vet\ClinicController;
 use App\Http\Controllers\Vet\ClinicServiceController;
 

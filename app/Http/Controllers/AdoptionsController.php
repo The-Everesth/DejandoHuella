@@ -3,10 +3,16 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use App\Services\FirebaseService;
 
 class AdoptionsController extends Controller
 {
+    protected $firebase;
+
+    public function __construct(FirebaseService $firebase)
+    {
+        $this->firebase = $firebase;
+    }
     /**
      * Guardar una nueva adopción
      */
@@ -21,24 +27,18 @@ class AdoptionsController extends Controller
         ]);
 
         try {
-            // Agregar información adicional
             $validated['fecha'] = now()->toIso8601String();
             $validated['estado'] = 'pendiente';
             $validated['id'] = uniqid('adoption_');
 
-            // Leer adopciones existentes
-            $filePath = 'adopciones.json';
-            $adopciones = [];
-            
-            if (Storage::disk('local')->exists($filePath)) {
-                $adopciones = json_decode(Storage::disk('local')->get($filePath), true) ?? [];
+            $firebaseResult = $this->firebase->saveAdoption($validated);
+
+            if (!$firebaseResult['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $firebaseResult['message']
+                ], 500);
             }
-
-            // Agregar nueva adopción
-            $adopciones[$validated['id']] = $validated;
-
-            // Guardar en archivo
-            Storage::disk('local')->put($filePath, json_encode($adopciones, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
             return response()->json([
                 'success' => true,
@@ -59,19 +59,11 @@ class AdoptionsController extends Controller
     public function index()
     {
         try {
-            $filePath = 'adopciones.json';
-            
-            if (!Storage::disk('local')->exists($filePath)) {
-                return response()->json([
-                    'success' => true,
-                    'data' => []
-                ]);
-            }
-
-            $adopciones = json_decode(Storage::disk('local')->get($filePath), true) ?? [];
+            $adopciones = $this->firebase->getAllAdoptions();
 
             return response()->json([
                 'success' => true,
+                'source' => 'firebase',
                 'data' => $adopciones
             ]);
         } catch (\Exception $e) {
@@ -88,18 +80,9 @@ class AdoptionsController extends Controller
     public function show(string $id)
     {
         try {
-            $filePath = 'adopciones.json';
+            $adopcion = $this->firebase->getAdoptionById($id);
 
-            if (!Storage::disk('local')->exists($filePath)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Adopción no encontrada'
-                ], 404);
-            }
-
-            $adopciones = json_decode(Storage::disk('local')->get($filePath), true) ?? [];
-
-            if (!isset($adopciones[$id])) {
+            if ($adopcion === null) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Adopción no encontrada'
@@ -108,12 +91,54 @@ class AdoptionsController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $adopciones[$id]
+                'source' => 'firebase',
+                'data' => $adopcion
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Guardar únicamente en Firebase (sin tocar el almacenamiento local)
+     */
+    public function storeToFirebase(Request $request)
+    {
+        $validated = $request->validate([
+            'nombreAnimal' => 'required|string|max:255',
+            'tipoAnimal' => 'required|string|max:100',
+            'edad' => 'required|integer|min:0|max:50',
+            'raza' => 'required|string|max:255',
+            'detalles' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $data = $validated;
+            $data['fecha'] = now()->toIso8601String();
+            $data['estado'] = 'pendiente';
+            $data['id'] = uniqid('adoption_');
+
+            $firebaseResult = $this->firebase->saveAdoption($data);
+
+            if (!$firebaseResult['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $firebaseResult['message']
+                ], 500);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Adopción enviada a Firebase',
+                'data' => $data
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al guardar en Firebase: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -133,34 +158,28 @@ class AdoptionsController extends Controller
         ]);
 
         try {
-            $filePath = 'adopciones.json';
+            $result = $this->firebase->updateAdoption($id, $validated);
 
-            if (!Storage::disk('local')->exists($filePath)) {
+            if (!$result['success'] && $result['message'] === 'Adopción no encontrada') {
                 return response()->json([
                     'success' => false,
                     'message' => 'Adopción no encontrada'
                 ], 404);
             }
 
-            $adopciones = json_decode(Storage::disk('local')->get($filePath), true) ?? [];
-
-            if (!isset($adopciones[$id])) {
+            if (!$result['success']) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Adopción no encontrada'
-                ], 404);
+                    'message' => $result['message']
+                ], 500);
             }
 
-            // Actualizar adopción
-            $adopciones[$id] = array_merge($adopciones[$id], $validated);
-
-            // Guardar
-            Storage::disk('local')->put($filePath, json_encode($adopciones, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            $adopcion = $this->firebase->getAdoptionById($id);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Adopción actualizada correctamente',
-                'data' => $adopciones[$id]
+                'data' => $adopcion
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -176,27 +195,21 @@ class AdoptionsController extends Controller
     public function destroy(string $id)
     {
         try {
-            $filePath = 'adopciones.json';
+            $result = $this->firebase->deleteAdoption($id);
 
-            if (!Storage::disk('local')->exists($filePath)) {
+            if (!$result['success'] && $result['message'] === 'Adopción no encontrada') {
                 return response()->json([
                     'success' => false,
                     'message' => 'Adopción no encontrada'
                 ], 404);
             }
 
-            $adopciones = json_decode(Storage::disk('local')->get($filePath), true) ?? [];
-
-            if (!isset($adopciones[$id])) {
+            if (!$result['success']) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Adopción no encontrada'
-                ], 404);
+                    'message' => $result['message']
+                ], 500);
             }
-
-            unset($adopciones[$id]);
-
-            Storage::disk('local')->put($filePath, json_encode($adopciones, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
             return response()->json([
                 'success' => true,

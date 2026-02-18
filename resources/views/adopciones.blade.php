@@ -11,7 +11,7 @@
             theme: {
                 extend: {
                     colors: {
-                        brand: '#0A7C86',
+                        brand: '#0d9488',
                         brandSoft: '#F5E7DA',
                         brandNavy: '#243B6B',
                     },
@@ -27,16 +27,31 @@
     <!-- Layout wrapper: full height + column -->
     <div class="min-h-screen flex flex-col">
         <!-- Navigation -->
-        <nav class="bg-white shadow">
+        <nav class="bg-teal-700 text-black">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
+                <div class="flex justify-between items-center h-16">
                     <div class="flex items-center">
-                        <a href="/" class="text-2xl font-bold text-brand">DejandoHuella</a>
+                        <a href="/" class="flex items-center gap-2">
+                            <span class="inline-flex items-center justify-center h-10 w-10 rounded-full bg-white/10">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 10.5c1.38 0 2.5-1.12 2.5-2.5S13.38 5.5 12 5.5 9.5 6.62 9.5 8s1.12 2.5 2.5 2.5z"/>
+                                    <path d="M12 12c-3.31 0-6 2.69-6 6h2a4 4 0 018 0h2c0-3.31-2.69-6-6-6z"/>
+                                </svg>
+                            </span>
+                            <span class="tracking-wide leading-none">
+                                DEJANDO<br>HUELLA
+                            </span>
+                        </a>
                     </div>
-                    <div class="flex items-center space-x-6">
-                        <a href="#" class="text-slate-600 hover:text-brand transition">Inicio</a>
-                        <a href="#" class="text-slate-600 hover:text-brand transition">Adopciones</a>
-                        <a href="#" class="text-slate-600 hover:text-brand transition">Contacto</a>
+                    <div class="flex items-center gap-8 text-base absolute left-1/2 transform -translate-x-1/2">
+                        <a href="{{ url('/') }}" class="hover:text-white/80 transition">Inicio</a>
+                        <a href="{{ route('adopciones.form') }}" class="hover:text-white/80 transition">Adopción</a>
+                        <a href="#" class="hover:text-white/80 transition">Servicios Medicos</a>
+                    </div>
+                    <div class="flex items-center">
+                        <a href="{{ route('login') }}" class="bg-[#F5E7DA] text-black px-8 py-2 rounded-full hover:opacity-90 transition">
+                            Iniciar sesión
+                        </a>
                     </div>
                 </div>
             </div>
@@ -45,8 +60,8 @@
         <!-- Page Heading -->
         <header class="bg-white shadow">
             <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                <h1 class="text-3xl font-bold text-slate-900">Adopción de Mascotas</h1>
-                <p class="text-slate-600 mt-2">Registra una mascota disponible para adopción</p>
+                <h1 class="text-3xl font-bold text-gray-900">Adopción de Mascotas</h1>
+                <p class="text-gray-600 mt-2">Registra una mascota disponible para adopción</p>
             </div>
         </header>
 
@@ -61,12 +76,12 @@
                     <!-- Form Card -->
                     <div class="bg-white rounded-lg shadow">
                         <div class="p-6">
-                            <h2 class="text-xl font-bold text-slate-900 mb-6">Registro de Mascota</h2>
+                            <h2 class="text-xl font-bold text-gray-900 mb-6">Registro de mascota</h2>
 
                             <form id="adopcionForm" class="space-y-4">
                                 <div>
-                                    <label for="nombreAnimal" class="block text-sm font-medium text-slate-700 mb-1">
-                                        Nombre del Animal <span class="text-red-500">*</span>
+                                    <label for="nombreAnimal" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Nombre del animal <span class="text-red-500">*</span>
                                     </label>
                                     <input 
                                         type="text" 
@@ -74,19 +89,19 @@
                                         name="nombreAnimal" 
                                         placeholder="Ej: Max, Luna..." 
                                         required
-                                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-700 focus:border-transparent"
                                     >
                                 </div>
 
                                 <div>
-                                    <label for="tipoAnimal" class="block text-sm font-medium text-slate-700 mb-1">
-                                        Tipo de Animal <span class="text-red-500">*</span>
+                                    <label for="tipoAnimal" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Tipo de animal <span class="text-red-500">*</span>
                                     </label>
                                     <select 
                                         id="tipoAnimal" 
                                         name="tipoAnimal"
                                         required
-                                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-700 focus:border-transparent"
                                     >
                                         <option value="">Selecciona un tipo...</option>
                                         <option value="Perro">Perro</option>
@@ -98,7 +113,7 @@
                                 </div>
 
                                 <div>
-                                    <label for="edad" class="block text-sm font-medium text-slate-700 mb-1">
+                                    <label for="edad" class="block text-sm font-medium text-gray-700 mb-1">
                                         Edad (años) <span class="text-red-500">*</span>
                                     </label>
                                     <input 
@@ -109,12 +124,12 @@
                                         max="50" 
                                         placeholder="3" 
                                         required
-                                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-700 focus:border-transparent"
                                     >
                                 </div>
 
                                 <div>
-                                    <label for="raza" class="block text-sm font-medium text-slate-700 mb-1">
+                                    <label for="raza" class="block text-sm font-medium text-gray-700 mb-1">
                                         Raza <span class="text-red-500">*</span>
                                     </label>
                                     <input 
@@ -123,12 +138,12 @@
                                         name="raza" 
                                         placeholder="Ej: Golden Retriever..." 
                                         required
-                                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-700 focus:border-transparent"
                                     >
                                 </div>
 
                                 <div>
-                                    <label for="detalles" class="block text-sm font-medium text-slate-700 mb-1">
+                                    <label for="detalles" class="block text-sm font-medium text-gray-700 mb-1">
                                         Detalles adicionales
                                     </label>
                                     <textarea 
@@ -136,27 +151,31 @@
                                         name="detalles" 
                                         placeholder="Descripción del carácter, personalidad, necesidades especiales..."
                                         rows="4"
-                                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-700 focus:border-transparent"
                                     ></textarea>
                                 </div>
 
                                 <button 
                                     type="submit" 
-                                    class="w-full bg-brand hover:bg-teal-800 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out transform hover:scale-105 active:scale-95"
+                                    class="w-full bg-[#F5E7DA] text-black font-bold py-3 px-4 rounded-full hover:opacity-90 transition"
                                 >
-                                    Registrar Adopción
+                                    Registrar adopción
                                 </button>
                             </form>
                         </div>
                     </div>
 
                     <!-- List Card -->
-                    <div class="bg-white rounded-lg shadow">
+                    <div class="bg-white rounded-lg shadow-lg border border-slate-100">
                         <div class="p-6">
-                            <h2 class="text-xl font-bold text-slate-900 mb-6">Adopciones Registradas</h2>
-                            <div id="adopcionList" class="space-y-3 max-h-96 overflow-y-auto">
-                                <div class="text-center py-8">
-                                    <p class="text-slate-500">Cargando...</p>
+                            <div class="mb-6 pb-4 border-b border-slate-200">
+                                <h2 class="text-2xl font-bold text-gray-900">Adopciones registradas</h2>
+                            </div>
+                            <div id="adopcionList" class="space-y-4 max-h-96 overflow-y-auto pr-2">
+                                <div class="text-center py-12">
+                                    <div class="animate-pulse">
+                                        <p class="text-gray-500 text-lg">Cargando adopciones...</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -166,15 +185,61 @@
         </main>
 
         <!-- Footer -->
-        <footer class="bg-teal-700 text-white">
-            <div class="max-w-7xl mx-auto px-6 lg:px-8 py-10">
-                <p class="text-sm text-white/90">© 2026 DejandoHuella. Todos los derechos reservados.</p>
+        <footer class="bg-teal-700 text-black">
+            <div class="max-w-7xl mx-auto px-6 lg:px-8 py-10 grid grid-cols-1 md:grid-cols-3 gap-10">
+
+                <div>
+                    <h3 class="text-2xl font-bold mb-4">Información Animal</h3>
+                    <ul class="space-y-3 text-white/90 font-semibold">
+                        <li class="flex items-start gap-3">
+                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
+                            Alimentación Animal
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
+                            Enfermedades comunes
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
+                            Esterilización/Vacunación
+                        </li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 class="text-2xl font-bold mb-4">Información de contacto</h3>
+                    <ul class="space-y-3 text-white/90 font-semibold">
+                        <li class="flex items-start gap-3">
+                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
+                            Blvd de la Juventud 1006A, Solares 20 de Noviembre, 34288 Durango, Dgo.
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
+                            +52 618 - 137 - 8344
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="md:text-right">
+                    <h3 class="text-2xl font-bold mb-4">Redes Sociales</h3>
+                    <div class="flex md:justify-end gap-6">
+                        <a href="#" class="h-14 w-14 rounded-full bg-[#243B6B] flex items-center justify-center hover:opacity-90 transition" aria-label="Facebook">
+                            <span class="text-2xl font-black">f</span>
+                        </a>
+                        <a href="#" class="h-14 w-14 rounded-full bg-[#243B6B] flex items-center justify-center hover:opacity-90 transition" aria-label="Email">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
             </div>
         </footer>
     </div>
 
     <script>
-        const API_URL = 'http://localhost:8000/api/adoptions';
+        const API_URL = '/api/adoptions';
 
         // Función para mostrar alertas con Tailwind
         function showAlert(message, type) {
@@ -215,31 +280,45 @@
                     adopcionesArray.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
                     if (adopcionesArray.length === 0) {
-                        adopcionList.innerHTML = '<div class="text-center py-8"><p class="text-slate-500">No hay adopciones registradas aún</p></div>';
+                        adopcionList.innerHTML = '<div class="text-center py-12"><p class="text-gray-500 text-lg">No hay adopciones registradas aún</p><p class="text-gray-400 text-sm mt-2">¡Sé el primero en registrar una mascota!</p></div>';
                         return;
                     }
 
                     adopcionesArray.forEach((adopcion) => {
                         const fecha = new Date(adopcion.fecha).toLocaleDateString('es-ES');
                         const html = `
-                            <div class="p-4 rounded-lg border border-slate-200 bg-slate-50 hover:shadow-md transition-shadow duration-200">
-                                <h3 class="font-semibold text-brand mb-2">${adopcion.nombreAnimal}</h3>
-                                <p class="text-sm text-slate-600 mb-1"><strong>Tipo:</strong> ${adopcion.tipoAnimal}</p>
-                                <p class="text-sm text-slate-600 mb-1"><strong>Edad:</strong> ${adopcion.edad} año${adopcion.edad !== 1 ? 's' : ''}</p>
-                                <p class="text-sm text-slate-600 mb-1"><strong>Raza:</strong> ${adopcion.raza}</p>
-                                ${adopcion.detalles ? `<p class="text-sm text-slate-600 mb-1"><strong>Detalles:</strong> ${adopcion.detalles}</p>` : ''}
-                                <p class="text-xs text-slate-500 mb-2"><strong>Fecha:</strong> ${fecha}</p>
-                                <span class="inline-block bg-brand text-white text-xs font-semibold px-3 py-1 rounded-full">${adopcion.estado}</span>
+                            <div class="group p-4 rounded-2xl border bg-teal-50 hover:shadow-md transition-all duration-200 cursor-pointer">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div>
+                                        <h3 class="text-lg font-extrabold text-gray-900">${adopcion.nombreAnimal}</h3>
+                                        <p class="text-sm text-gray-600">${adopcion.tipoAnimal}</p>
+                                    </div>
+                                    <span class="inline-block bg-teal-700 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-sm">${adopcion.estado}</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <span class="text-sm text-gray-700"><strong>Edad:</strong> ${adopcion.edad} año${adopcion.edad != 1 ? 's' : ''}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-sm text-gray-700"><strong>Raza:</strong> ${adopcion.raza}</span>
+                                    </div>
+                                </div>
+                                ${adopcion.detalles ? `<div class="bg-white rounded-lg p-3 mb-3 border">
+                                    <p class="text-sm text-gray-600"><strong class="text-gray-900">Detalles:</strong> ${adopcion.detalles}</p>
+                                </div>` : ''}
+                                <div class="flex items-center justify-between pt-3 border-t border-teal-200">
+                                    <span class="text-xs text-gray-600">Registrado el ${fecha}</span>
+                                </div>
                             </div>
                         `;
                         adopcionList.innerHTML += html;
                     });
                 } else {
-                    adopcionList.innerHTML = '<div class="text-center py-8"><p class="text-slate-500">No hay adopciones registradas aún</p></div>';
+                    adopcionList.innerHTML = '<div class="text-center py-12"><p class="text-gray-500 text-lg">No hay adopciones registradas aún</p><p class="text-gray-400 text-sm mt-2">¡Sé el primero en registrar una mascota!</p></div>';
                 }
             } catch (error) {
                 console.error('Error al cargar adopciones:', error);
-                adopcionList.innerHTML = '<div class="text-center py-8"><p class="text-red-500">Error al cargar adopciones</p></div>';
+                adopcionList.innerHTML = '<div class="text-center py-12"><p class="text-red-600 text-lg font-medium">Error al cargar adopciones</p><p class="text-gray-400 text-sm mt-2">Intenta recargar la página</p></div>';
             }
         }
 
