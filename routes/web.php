@@ -26,8 +26,43 @@ Route::view('/adopciones-form', 'adopciones')->name('adopciones.form');
 use App\Http\Controllers\Vet\ClinicController;
 use App\Http\Controllers\Vet\ClinicServiceController;
 
+// rutas de prueba Firestore
+use App\Services\Firestore\ClinicsFirestoreService;
+use App\Services\Firestore\AppointmentsFirestoreService;
+use Illuminate\Support\Str;
+
 //HOME PÚBLICO
 Route::view('/', 'home')->name('home');
+
+// --- rutas de prueba para Firestore REST client ------------------------------------------------
+Route::get('/test/firestore/create-clinic', function (ClinicsFirestoreService $svc) {
+    $id = 'clinic-'.Str::random(6);
+    $data = [
+        'name' => 'Clinica prueba '.Str::random(3),
+        'mysqlUserId' => auth()->id() ?? null,
+        'created_at' => now()->toIso8601String(),
+    ];
+    $doc = $svc->create($data, $id);
+    return response()->json(['id' => $id, 'doc' => $doc]);
+});
+
+Route::get('/test/firestore/list-clinics', function (ClinicsFirestoreService $svc) {
+    return response()->json($svc->list());
+});
+
+Route::get('/test/firestore/create-appointment', function (AppointmentsFirestoreService $svc) {
+    $id = 'appt-'.Str::random(6);
+    $data = [
+        'clinicId' => 'some-clinic',
+        'service' => 'vaccination',
+        'mysqlUserId' => auth()->id() ?? null,
+        'scheduled_at' => now()->addDays(1)->toIso8601String(),
+    ];
+    $doc = $svc->create($data, $id);
+    return response()->json(['id' => $id, 'doc' => $doc]);
+});
+
+// --- fin de rutas de prueba ------------------------------------------------------------------
 
 //ADOPCIONES PÚBLICAS (solo ver)
 Route::get('/adoptions', [AdoptionPublicController::class, 'index'])->name('adoptions.index');

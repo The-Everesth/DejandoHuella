@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Services\FirebaseService;
+use App\Services\Firestore\AdoptionsFirestoreService;
 
 class AdoptionsController extends Controller
 {
-    protected $firebase;
+    protected AdoptionsFirestoreService $firebase;
 
-    public function __construct(FirebaseService $firebase)
+    public function __construct(AdoptionsFirestoreService $firebase)
     {
         $this->firebase = $firebase;
     }
@@ -31,19 +31,12 @@ class AdoptionsController extends Controller
             $validated['estado'] = 'pendiente';
             $validated['id'] = uniqid('adoption_');
 
-            $firebaseResult = $this->firebase->saveAdoption($validated);
-
-            if (!$firebaseResult['success']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $firebaseResult['message']
-                ], 500);
-            }
+            $created = $this->firebase->create($validated, $validated['id']);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Adopción registrada correctamente',
-                'data' => $validated
+                'data' => $created
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -59,7 +52,7 @@ class AdoptionsController extends Controller
     public function index()
     {
         try {
-            $adopciones = $this->firebase->getAllAdoptions();
+            $adopciones = $this->firebase->list();
 
             return response()->json([
                 'success' => true,
@@ -80,7 +73,7 @@ class AdoptionsController extends Controller
     public function show(string $id)
     {
         try {
-            $adopcion = $this->firebase->getAdoptionById($id);
+            $adopcion = $this->firebase->get($id);
 
             if ($adopcion === null) {
                 return response()->json([
@@ -121,19 +114,12 @@ class AdoptionsController extends Controller
             $data['estado'] = 'pendiente';
             $data['id'] = uniqid('adoption_');
 
-            $firebaseResult = $this->firebase->saveAdoption($data);
-
-            if (!$firebaseResult['success']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $firebaseResult['message']
-                ], 500);
-            }
+            $created = $this->firebase->create($data, $data['id']);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Adopción enviada a Firebase',
-                'data' => $data
+                'data' => $created
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -158,23 +144,15 @@ class AdoptionsController extends Controller
         ]);
 
         try {
-            $result = $this->firebase->updateAdoption($id, $validated);
-
-            if (!$result['success'] && $result['message'] === 'Adopción no encontrada') {
+            $updated = $this->firebase->update($id, $validated);
+            if (! $updated) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Adopción no encontrada'
                 ], 404);
             }
 
-            if (!$result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $result['message']
-                ], 500);
-            }
-
-            $adopcion = $this->firebase->getAdoptionById($id);
+            $adopcion = $this->firebase->get($id);
 
             return response()->json([
                 'success' => true,
@@ -195,20 +173,13 @@ class AdoptionsController extends Controller
     public function destroy(string $id)
     {
         try {
-            $result = $this->firebase->deleteAdoption($id);
+            $deleted = $this->firebase->delete($id);
 
-            if (!$result['success'] && $result['message'] === 'Adopción no encontrada') {
+            if (! $deleted) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Adopción no encontrada'
                 ], 404);
-            }
-
-            if (!$result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $result['message']
-                ], 500);
             }
 
             return response()->json([

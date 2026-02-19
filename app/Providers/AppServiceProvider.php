@@ -11,7 +11,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // singleton to reuse credential token between requests
+        $this->app->singleton(\App\Services\Firestore\FirestoreRestClient::class, function ($app) {
+            return new \App\Services\Firestore\FirestoreRestClient();
+        });
     }
 
     /**

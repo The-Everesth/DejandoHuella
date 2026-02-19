@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Services\FirebaseService;
+use App\Services\Firestore\AdoptionsFirestoreService;
 
 class FirebaseAdoptionSeeder extends Seeder
 {
@@ -12,7 +12,7 @@ class FirebaseAdoptionSeeder extends Seeder
      */
     public function run(): void
     {
-        $firebase = app(FirebaseService::class);
+        $firebase = app(AdoptionsFirestoreService::class);
 
         $data = [
             'nombre' => 'Firulais',
@@ -23,7 +23,7 @@ class FirebaseAdoptionSeeder extends Seeder
             'contacto' => 'prueba@ejemplo.com'
         ];
 
-        $result = $firebase->saveAdoption($data);
+        $result = $firebase->create($data, uniqid('adop_'));
 
         $this->command->info('Firebase push: ' . json_encode($result));
     }
