@@ -151,7 +151,8 @@ class FirestoreRestClient
 
     public function getDocument(string $documentPath): ?array
     {
-        $url = $this->baseUrl().'/'.rawurlencode($documentPath);
+        // DO NOT urlencode the entire path - keep '/' literal
+        $url = $this->baseUrl().'/'.$documentPath;
         try {
             $body = $this->request('GET', $url);
             return $body;
@@ -165,7 +166,8 @@ class FirestoreRestClient
 
     public function listDocuments(string $collectionPath, array $queryParams = []): array
     {
-        $url = $this->baseUrl().'/'.rawurlencode($collectionPath);
+        // collectionPath should be literal (e.g., "clinicas"), no urlencode
+        $url = $this->baseUrl().'/'.$collectionPath;
         if (! empty($queryParams)) {
             $url .= '?'.http_build_query($queryParams);
         }
@@ -176,24 +178,44 @@ class FirestoreRestClient
 
     public function createDocument(string $collectionPath, string $documentId, array $data): array
     {
-        $url = $this->baseUrl().'/'.rawurlencode($collectionPath)."?documentId=".rawurlencode($documentId);
+        // collectionPath should be literal (e.g., "clinicas"), no urlencode
+        // documentId gets urlencode for safety
+        $url = $this->baseUrl().'/'.$collectionPath."?documentId=".rawurlencode($documentId);
         $body = ['fields' => $this->phpToFields($data)];
         return $this->request('POST', $url, ['json' => $body]);
     }
 
     public function patchDocument(string $documentPath, array $data, array $updateMaskFields = []): array
     {
-        $url = $this->baseUrl().'/'.rawurlencode($documentPath);
-        $body = ['fields' => $this->phpToFields($data)];
+        // DO NOT urlencode the entire path - keep '/' literal
+        $url = $this->baseUrl().'/'.$documentPath;
+        
+        // updateMask debe ir en query parameters con formato: ?updateMask.fieldPaths=field1&updateMask.fieldPaths=field2
         if (! empty($updateMaskFields)) {
-            $body['updateMask'] = ['fieldPaths' => $updateMaskFields];
+            $maskParams = [];
+            foreach ($updateMaskFields as $field) {
+                $maskParams[] = 'updateMask.fieldPaths=' . urlencode($field);
+            }
+            $url .= '?' . implode('&', $maskParams);
         }
+        
+        Log::debug('FirestoreRestClient::patchDocument() - Prepared PATCH request', [
+            'documentPath' => $documentPath,
+            'url' => $url,
+            'updateMaskFields' => $updateMaskFields,
+            'dataFields' => array_keys($data),
+            'pathValidation' => ['hasLiteralSlash' => strpos($url, '/clinicas/') !== false, 'noPercentTwoF' => strpos($url, '%2F') === false],
+        ]);
+        
+        // Body contiene solo los fields, sin updateMask
+        $body = ['fields' => $this->phpToFields($data)];
         return $this->request('PATCH', $url, ['json' => $body]);
     }
 
     public function deleteDocument(string $documentPath): bool
     {
-        $url = $this->baseUrl().'/'.rawurlencode($documentPath);
+        // DO NOT urlencode the entire path - keep '/' literal
+        $url = $this->baseUrl().'/'.$documentPath;
         $this->request('DELETE', $url);
         return true; // success if no exception
     }
@@ -220,14 +242,32 @@ class FirestoreRestClient
             $status = $res->getStatusCode();
             $body = json_decode((string) $res->getBody(), true);
             if ($status < 200 || $status >= 300) {
-                Log::error('Firestore response non-2xx', ['method' => $method, 'url' => $url, 'status' => $status, 'body' => $body]);
+                Log::warning('Firestore response non-2xx', [
+                    'method' => $method,
+                    'url' => $url,
+                    'status' => $status,
+                    'body' => $body,
+                    'headers' => $res->getHeaders(),
+                ]);
+            } else {
+                Log::debug('Firestore request success', [
+                    'method' => $method,
+                    'url' => $url,
+                    'status' => $status,
+                ]);
             }
             return $body;
         } catch (\GuzzleHttp\Exception\RequestException $e) {
             $resp = $e->getResponse();
             $status = $resp ? $resp->getStatusCode() : null;
             $body = $resp ? (string)$resp->getBody() : null;
-            Log::error('Firestore request failed', ['method' => $method, 'url' => $url, 'status' => $status, 'body' => $body, 'exception' => $e]);
+            Log::error('Firestore request failed', [
+                'method' => $method,
+                'url' => $url,
+                'status' => $status,
+                'body' => $body,
+                'message' => $e->getMessage(),
+            ]);
             throw $e;
         }
     }
@@ -321,14 +361,59 @@ class FirestoreRestClient
     public function patchDoc(string $collection, string $id, array $data): bool
     {
         $existing = $this->getDoc($collection, $id);
-        if (is_null($existing)) {
-            // crear documento nuevo con id
-            $this->createDocument($collection, $id, $data);
-            return true;
-        }
         $fields = array_keys($data);
-        $this->patchDocument("{$collection}/{$id}", $data, $fields);
-        return true;
+        
+        if (is_null($existing)) {
+            // Document does not exist, attempt CREATE
+            Log::info('FirestoreRestClient::patchDoc() - Document does not exist, attempting CREATE', [
+                'collection' => $collection,
+                'id' => $id,
+            ]);
+            
+            try {
+                $this->createDocument($collection, $id, $data);
+                Log::info('FirestoreRestClient::patchDoc() - Document created successfully', [
+                    'collection' => $collection,
+                    'id' => $id,
+                ]);
+                return true;
+            } catch (\GuzzleHttp\Exception\ClientException $e) {
+                // If we get 409 Conflict, document exists (race condition)
+                // Fall through to PATCH instead
+                if ($e->getResponse() && $e->getResponse()->getStatusCode() === 409) {
+                    Log::warning('FirestoreRestClient::patchDoc() - CREATE returned 409 Conflict (doc exists), falling back to PATCH', [
+                        'collection' => $collection,
+                        'id' => $id,
+                    ]);
+                } else {
+                    throw $e;
+                }
+            }
+        }
+        
+        // Document exists or we need to PATCH as fallback (409 race condition)
+        Log::info('FirestoreRestClient::patchDoc() - Document exists, patching', [
+            'collection' => $collection,
+            'id' => $id,
+            'fieldsToUpdate' => $fields,
+        ]);
+        
+        try {
+            $result = $this->patchDocument("{$collection}/{$id}", $data, $fields);
+            Log::info('FirestoreRestClient::patchDoc() - PATCH completed successfully', [
+                'collection' => $collection,
+                'id' => $id,
+            ]);
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('FirestoreRestClient::patchDoc() - PATCH failed', [
+                'collection' => $collection,
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     public function deleteDoc(string $collection, string $id): bool

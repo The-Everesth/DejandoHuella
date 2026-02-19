@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\MedicalService;
+use Illuminate\Http\Request;
 
 class ServiceBrowserController extends Controller
 {
-    public function index($request)
-{
-    $serviceId = $request->query('service_id');
-    $q = trim((string)$request->query('q',''));
+    public function index(Request $request)
+    {
+        $serviceId = $request->query('service_id');
+        $q = trim((string)$request->query('q',''));
 
     $services = \App\Models\MedicalService::query()
         ->where('is_active', true)

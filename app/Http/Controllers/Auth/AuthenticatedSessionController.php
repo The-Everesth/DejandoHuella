@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Providers\RouteServiceProvider;
+use App\Services\Firestore\UsersFirestoreService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,11 +24,16 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request.
      */
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(LoginRequest $request, UsersFirestoreService $usersService): RedirectResponse
     {
         $request->authenticate();
 
         $request->session()->regenerate();
+
+        // Sincroniza el usuario a Firestore después del login exitoso
+        if (auth()->check()) {
+            $usersService->syncFromUser(auth()->user());
+        }
 
         return redirect()->intended(RouteServiceProvider::HOME);
     }

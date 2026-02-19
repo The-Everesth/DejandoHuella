@@ -13,11 +13,35 @@ class AdoptionsController extends Controller
     {
         $this->firebase = $firebase;
     }
+
+    /**
+     * Mostrar el formulario de adopciones
+     */
+    public function form()
+    {
+        return view('adopciones');
+    }
+
     /**
      * Guardar una nueva adopción
      */
     public function store(Request $request)
     {
+        // Verificar que el usuario está autenticado y tiene la role 'refugio'
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes iniciar sesión para registrar una adopción'
+            ], 401);
+        }
+
+        if (!auth()->user()->hasRole('refugio')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo los refugios pueden registrar adopciones'
+            ], 403);
+        }
+
         $validated = $request->validate([
             'nombreAnimal' => 'required|string|max:255',
             'tipoAnimal' => 'required|string|max:100',

@@ -1,84 +1,24 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Adopciones</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: '#0d9488',
-                        brandSoft: '#F5E7DA',
-                        brandNavy: '#243B6B',
-                    },
-                    fontFamily: {
-                        sans: ['Figtree', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-</head>
-<body class="font-sans antialiased bg-slate-50 text-slate-900">
-    <!-- Layout wrapper: full height + column -->
-    <div class="min-h-screen flex flex-col">
-        <!-- Navigation -->
-        <nav class="bg-teal-700 text-black">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-16">
-                    <div class="flex items-center">
-                        <a href="/" class="flex items-center gap-2">
-                            <span class="inline-flex items-center justify-center h-10 w-10 rounded-full bg-white/10">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 10.5c1.38 0 2.5-1.12 2.5-2.5S13.38 5.5 12 5.5 9.5 6.62 9.5 8s1.12 2.5 2.5 2.5z"/>
-                                    <path d="M12 12c-3.31 0-6 2.69-6 6h2a4 4 0 018 0h2c0-3.31-2.69-6-6-6z"/>
-                                </svg>
-                            </span>
-                            <span class="tracking-wide leading-none">
-                                DEJANDO<br>HUELLA
-                            </span>
-                        </a>
-                    </div>
-                    <div class="flex items-center gap-8 text-base absolute left-1/2 transform -translate-x-1/2">
-                        <a href="{{ url('/') }}" class="hover:text-white/80 transition">Inicio</a>
-                        <a href="{{ route('adopciones.form') }}" class="hover:text-white/80 transition">Adopción</a>
-                        <a href="#" class="hover:text-white/80 transition">Servicios Medicos</a>
-                    </div>
-                    <div class="flex items-center">
-                        <a href="{{ route('login') }}" class="bg-[#F5E7DA] text-black px-8 py-2 rounded-full hover:opacity-90 transition">
-                            Iniciar sesión
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Page Heading -->
-        <header class="bg-white shadow">
-            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+<x-app-layout>
+    <div class="py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Page Heading -->
+            <header class="mb-6">
                 <h1 class="text-3xl font-bold text-gray-900">Adopción de Mascotas</h1>
                 <p class="text-gray-600 mt-2">Registra una mascota disponible para adopción</p>
-            </div>
-        </header>
+            </header>
 
-        <!-- Page Content -->
-        <main class="flex-1">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <!-- Alert -->
-                <div id="alert" class="mb-4 hidden rounded-lg p-4 text-sm font-medium">
-                </div>
+            <!-- Alert -->
+            <div id="alert" class="mb-4 hidden rounded-lg p-4 text-sm font-medium"></div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- Form Card -->
-                    <div class="bg-white rounded-lg shadow">
-                        <div class="p-6">
-                            <h2 class="text-xl font-bold text-gray-900 mb-6">Registro de mascota</h2>
+                    @auth
+                        @role('refugio')
+                            <div class="bg-white rounded-lg shadow">
+                                <div class="p-6">
+                                    <h2 class="text-xl font-bold text-gray-900 mb-6">Registro de mascota</h2>
 
-                            <form id="adopcionForm" class="space-y-4">
+                                    <form id="adopcionForm" class="space-y-4">
                                 <div>
                                     <label for="nombreAnimal" class="block text-sm font-medium text-gray-700 mb-1">
                                         Nombre del animal <span class="text-red-500">*</span>
@@ -164,6 +104,26 @@
                             </form>
                         </div>
                     </div>
+                        @else
+                            <div class="bg-red-50 rounded-lg shadow border border-red-200">
+                                <div class="p-6">
+                                    <h2 class="text-xl font-bold text-red-900 mb-4">Acceso denegado</h2>
+                                    <p class="text-red-800 mb-4">Solo los refugios registrados pueden publicar mascotas para adopción.</p>
+                                    <p class="text-gray-700">Si eres un refugio, contacta al administrador para solicitar este acceso.</p>
+                                </div>
+                            </div>
+                        @endrole
+                    @else
+                        <div class="bg-blue-50 rounded-lg shadow border border-blue-200">
+                            <div class="p-6">
+                                <h2 class="text-xl font-bold text-blue-900 mb-4">Inicia sesión para registrar mascotas</h2>
+                                <p class="text-blue-800 mb-6">Si eres parte de un refugio, inicia sesión para publicar mascotas disponibles para adopción.</p>
+                                <a href="{{ route('login') }}" class="inline-block bg-[#F5E7DA] text-black font-bold py-3 px-6 rounded-full hover:opacity-90 transition">
+                                    Iniciar sesión
+                                </a>
+                            </div>
+                        </div>
+                    @endauth
 
                     <!-- List Card -->
                     <div class="bg-white rounded-lg shadow-lg border border-slate-100">
@@ -182,63 +142,11 @@
                     </div>
                 </div>
             </div>
-        </main>
-
-        <!-- Footer -->
-        <footer class="bg-teal-700 text-black">
-            <div class="max-w-7xl mx-auto px-6 lg:px-8 py-10 grid grid-cols-1 md:grid-cols-3 gap-10">
-
-                <div>
-                    <h3 class="text-2xl font-bold mb-4">Información Animal</h3>
-                    <ul class="space-y-3 text-white/90 font-semibold">
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            Alimentación Animal
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            Enfermedades comunes
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            Esterilización/Vacunación
-                        </li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-bold mb-4">Información de contacto</h3>
-                    <ul class="space-y-3 text-white/90 font-semibold">
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            Blvd de la Juventud 1006A, Solares 20 de Noviembre, 34288 Durango, Dgo.
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            +52 618 - 137 - 8344
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="md:text-right">
-                    <h3 class="text-2xl font-bold mb-4">Redes Sociales</h3>
-                    <div class="flex md:justify-end gap-6">
-                        <a href="#" class="h-14 w-14 rounded-full bg-[#243B6B] flex items-center justify-center hover:opacity-90 transition" aria-label="Facebook">
-                            <span class="text-2xl font-black">f</span>
-                        </a>
-                        <a href="#" class="h-14 w-14 rounded-full bg-[#243B6B] flex items-center justify-center hover:opacity-90 transition" aria-label="Email">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-
-            </div>
-        </footer>
+        </div>
     </div>
+</x-app-layout>
 
-    <script>
+<script>
         const API_URL = '/api/adoptions';
 
         // Función para mostrar alertas con Tailwind
@@ -360,6 +268,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                     },
                     body: JSON.stringify({
                         nombreAnimal,
@@ -388,5 +297,3 @@
             }
         });
     </script>
-</body>
-</html>

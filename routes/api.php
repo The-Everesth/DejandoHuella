@@ -28,3 +28,17 @@ Route::prefix('adoptions')->group(function () {
     Route::put('/{id}', [AdoptionsController::class, 'update']);
     Route::delete('/{id}', [AdoptionsController::class, 'destroy']);
 });
+
+use App\Http\Controllers\ClinicsController;
+
+Route::prefix('clinics')->group(function () {
+    Route::get('/', [ClinicsController::class, 'index']);
+    Route::get('/{id}', [ClinicsController::class, 'show']);
+    Route::post('/', [ClinicsController::class, 'store']);
+    Route::delete('/', [ClinicsController::class, 'destroy']);
+});
+
+use App\Services\Firestore\MedicalServicesFirestoreService;
+Route::get('/medical-services', function (MedicalServicesFirestoreService $svc) {
+    return response()->json(['success' => true, 'data' => array_values($svc->listActiveServices())]);
+});
