@@ -77,6 +77,7 @@
                     <div class="bg-white rounded-lg shadow">
                         <div class="p-6">
                             <h2 class="text-xl font-bold text-gray-900 mb-6">Registro de mascota</h2>
+                            <div id="formAccessNotice" class="mb-4 hidden rounded-lg p-3 text-sm font-medium"></div>
 
                             <form id="adopcionForm" class="space-y-4">
                                 <div>
@@ -240,6 +241,8 @@
 
     <script>
         const API_URL = '/api/adoptions';
+        const IS_AUTHENTICATED = @json(auth()->check());
+        const IS_REFUGIO = @json(auth()->check() && auth()->user()->hasRole('refugio'));
 
         // Función para mostrar alertas con Tailwind
         function showAlert(message, type) {
@@ -259,6 +262,30 @@
                     alertDiv.classList.add('hidden');
                 }, 4000);
             }
+        }
+
+        function setupFormAccess() {
+            const form = document.getElementById('adopcionForm');
+            const notice = document.getElementById('formAccessNotice');
+            const submitBtn = form.querySelector('button[type="submit"]');
+
+            if (IS_REFUGIO) {
+                notice.classList.add('hidden');
+                return;
+            }
+
+            const message = IS_AUTHENTICATED
+                ? 'Tu cuenta no tiene permisos para publicar. Solo usuarios con rol refugio pueden registrar adopciones.'
+                : 'Inicia sesión con una cuenta de refugio para publicar mascotas en adopción.';
+
+            notice.textContent = message;
+            notice.className = 'mb-4 rounded-lg p-3 text-sm font-medium bg-amber-50 text-amber-800 border border-amber-200';
+            notice.classList.remove('hidden');
+
+            form.querySelectorAll('input, select, textarea, button').forEach((element) => {
+                element.disabled = true;
+            });
+            submitBtn.textContent = 'Solo refugios pueden publicar';
         }
 
         // Función para cargar adopciones desde la API
@@ -295,7 +322,6 @@
                                         <p class="text-sm text-gray-600">${adopcion.tipoAnimal}</p>
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <span class="inline-block bg-teal-700 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-sm">${adopcion.estado}</span>
                                         <button
                                             type="button"
                                             class="delete-adopcion inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold border border-red-200 bg-white text-red-700 hover:bg-red-50 transition ${canDelete ? '' : 'opacity-50 cursor-not-allowed'}"
@@ -334,6 +360,7 @@
         }
 
         // Cargar adopciones al iniciar
+        setupFormAccess();
         loadAdopciones();
 
         // Recargar adopciones cada 3 segundos
@@ -343,6 +370,11 @@
         document.getElementById('adopcionList').addEventListener('click', async function (event) {
             const btn = event.target.closest('.delete-adopcion');
             if (!btn || btn.disabled) return;
+
+            if (!IS_REFUGIO) {
+                showAlert('Solo usuarios con rol refugio pueden eliminar adopciones', 'error');
+                return;
+            }
 
             const adoptionId = btn.dataset.id;
             if (!adoptionId) {
@@ -386,6 +418,11 @@
         // Agregar evento para el formulario
         document.getElementById('adopcionForm').addEventListener('submit', async function (event) {
             event.preventDefault();
+
+            if (!IS_REFUGIO) {
+                showAlert('Solo usuarios con rol refugio pueden publicar adopciones', 'error');
+                return;
+            }
 
             const nombreAnimal = document.getElementById('nombreAnimal').value.trim();
             const tipoAnimal = document.getElementById('tipoAnimal').value;
