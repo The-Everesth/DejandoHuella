@@ -39,7 +39,7 @@ class ServiceBrowserController extends Controller
         ->appends(request()->query());
 
 
-    return view('public.services.index', compact('services','clinics','serviceId','q'));
+    return view('services.index', compact('services','clinics','serviceId','q'));
 }
 
 

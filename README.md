@@ -21,6 +21,30 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
+## Migraciones en local (equipo)
+
+Si `php artisan migrate` falla con `Table already exists`, primero valida conflictos entre archivos de migración y tabla `migrations`:
+
+- Auditoría (sin cambios): `php artisan migrations:audit-existing-creates`
+- Registrar (stamp) solo `create_*_table` pendientes cuya tabla ya existe: `php artisan migrations:audit-existing-creates --stamp`
+- Ejecutar pendientes reales: `php artisan migrate`
+
+Recomendación de flujo:
+
+1. Haz respaldo antes de sincronizar: `mysqldump -u root -p dejandohuella > backup_pre_sync.sql`
+2. No modifiques migraciones históricas ya compartidas.
+3. Si cambia el esquema, agrega una migración nueva de tipo alter.
+4. En ambiente local limpio usa `php artisan migrate:fresh --seed`.
+
+Variables mínimas a revisar en `.env`:
+
+- `APP_ENV=local`
+- `DB_CONNECTION=mysql`
+- `DB_HOST=127.0.0.1`
+- `DB_PORT=3306`
+- `DB_DATABASE=dejandohuella`
+- `DB_USERNAME` y `DB_PASSWORD` correctos para Laragon
+
 ## Learning Laravel
 
 Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
