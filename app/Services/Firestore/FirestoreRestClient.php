@@ -16,8 +16,13 @@ class FirestoreRestClient
     public function __construct()
     {
         // Determine credentials path first (required to read project id when missing)
-        $path = config('firebase.credentials') ?: base_path(env('FIREBASE_CREDENTIALS'));
-        if (! file_exists($path)) {
+        $path = config('firebase.credentials');
+        if (! $path) {
+            $raw = env('FIREBASE_CREDENTIALS') ?: env('FIREBASE_CREDENTIALS_PATH');
+            $path = $raw ? base_path($raw) : null;
+        }
+
+        if (! $path || ! is_file($path) || ! is_readable($path)) {
             throw new \RuntimeException("No se encontró el archivo de credenciales de Firebase: $path");
         }
 
