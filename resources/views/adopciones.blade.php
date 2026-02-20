@@ -275,7 +275,7 @@
                     // Convertir objeto a array y ordenar por fecha
                     const adopcionesArray = Array.isArray(result.data) 
                         ? result.data
-                        : Object.entries(result.data).map(([id, data]) => ({ id, ...data }));
+                        : Object.entries(result.data).map(([id, data]) => ({ ...data, id }));
 
                     adopcionesArray.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
@@ -286,6 +286,7 @@
 
                     adopcionesArray.forEach((adopcion) => {
                         const fecha = new Date(adopcion.fecha).toLocaleDateString('es-ES');
+                        const canDelete = Boolean(adopcion.id);
                         const html = `
                             <div class="group p-4 rounded-2xl border bg-teal-50 hover:shadow-md transition-all duration-200 cursor-pointer">
                                 <div class="flex items-start justify-between mb-3">
@@ -293,7 +294,17 @@
                                         <h3 class="text-lg font-extrabold text-gray-900">${adopcion.nombreAnimal}</h3>
                                         <p class="text-sm text-gray-600">${adopcion.tipoAnimal}</p>
                                     </div>
-                                    <span class="inline-block bg-teal-700 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-sm">${adopcion.estado}</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-block bg-teal-700 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-sm">${adopcion.estado}</span>
+                                        <button
+                                            type="button"
+                                            class="delete-adopcion inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold border border-red-200 bg-white text-red-700 hover:bg-red-50 transition ${canDelete ? '' : 'opacity-50 cursor-not-allowed'}"
+                                            data-id="${adopcion.id ?? ''}"
+                                            ${canDelete ? '' : 'disabled'}
+                                        >
+                                            Eliminar
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-3 mb-3">
                                     <div>
@@ -327,6 +338,50 @@
 
         // Recargar adopciones cada 3 segundos
         setInterval(loadAdopciones, 3000);
+
+        // Eliminar adopción registrada
+        document.getElementById('adopcionList').addEventListener('click', async function (event) {
+            const btn = event.target.closest('.delete-adopcion');
+            if (!btn || btn.disabled) return;
+
+            const adoptionId = btn.dataset.id;
+            if (!adoptionId) {
+                showAlert('No se pudo identificar la adopción a eliminar', 'error');
+                return;
+            }
+
+            if (!confirm('¿Seguro que quieres eliminar esta adopción?')) {
+                return;
+            }
+
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Eliminando...';
+
+            try {
+                const response = await fetch(`${API_URL}/${encodeURIComponent(adoptionId)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                });
+
+                const result = await response.json().catch(() => ({}));
+
+                if (response.ok && result.success) {
+                    showAlert('Adopción eliminada correctamente', 'success');
+                    loadAdopciones();
+                } else {
+                    showAlert('Error: ' + (result.message || 'No se pudo eliminar la adopción'), 'error');
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
 
         // Agregar evento para el formulario
         document.getElementById('adopcionForm').addEventListener('submit', async function (event) {
