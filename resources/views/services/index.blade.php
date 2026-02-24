@@ -16,8 +16,8 @@
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Servicio</label>
-            <select name="service_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500">
-              <option value="">Todos los servicios</option>
+            <select name="service_id" class="w-full border border-gray-300 rounded-lg pl-3 pr-10 py-2 text-sm font-normal subpixel-antialiased leading-5 focus:outline-none focus:ring-2 focus:ring-teal-500" style="font-family: Segoe UI, Tahoma, Arial, sans-serif; text-rendering: auto; -webkit-font-smoothing: auto;">
+              <option value="">Todos los servicios médicos</option>
               @forelse($services as $service)
                 <option value="{{ $service->id }}" @selected($serviceId == $service->id)>
                   {{ $service->name ?? $service->title ?? 'Sin nombre' }}

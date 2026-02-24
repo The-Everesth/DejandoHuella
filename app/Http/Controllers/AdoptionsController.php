@@ -4,56 +4,48 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\Firestore\AdoptionsFirestoreService;
+use Illuminate\Support\Str;
 
 class AdoptionsController extends Controller
 {
-    protected AdoptionsFirestoreService $firebase;
+    protected $firebase;
 
     public function __construct(AdoptionsFirestoreService $firebase)
     {
         $this->firebase = $firebase;
     }
-
-    /**
-     * Mostrar el formulario de adopciones
-     */
-    public function form()
-    {
-        return view('adopciones');
-    }
-
     /**
      * Guardar una nueva adopción
      */
     public function store(Request $request)
     {
-        // Verificar que el usuario está autenticado y tiene la role 'refugio'
-        if (!auth()->check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Debes iniciar sesión para registrar una adopción'
-            ], 401);
-        }
-
-        if (!auth()->user()->hasRole('refugio')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Solo los refugios pueden registrar adopciones'
-            ], 403);
-        }
-
         $validated = $request->validate([
             'nombreAnimal' => 'required|string|max:255',
             'tipoAnimal' => 'required|string|max:100',
             'edad' => 'required|integer|min:0|max:50',
             'raza' => 'required|string|max:255',
             'detalles' => 'nullable|string|max:1000',
+            'fotoMascota' => 'nullable|image|max:4096',
         ]);
 
         try {
             $validated['fecha'] = now()->toIso8601String();
-            $validated['estado'] = 'pendiente';
+            $validated['estado'] = 'disponible';
             $validated['id'] = uniqid('adoption_');
+
+            if ($request->hasFile('fotoMascota')) {
+                $upload = $request->file('fotoMascota');
+                $directory = public_path('uploads/adoptions');
+                if (! is_dir($directory)) {
+                    mkdir($directory, 0755, true);
+                }
+
+                $filename = Str::uuid()->toString().'.'.$upload->getClientOriginalExtension();
+                $upload->move($directory, $filename);
+
+                $validated['imagePath'] = 'uploads/adoptions/'.$filename;
+                $validated['imageUrl'] = url('uploads/adoptions/'.$filename);
+            }
 
             $created = $this->firebase->create($validated, $validated['id']);
 
@@ -130,13 +122,28 @@ class AdoptionsController extends Controller
             'edad' => 'required|integer|min:0|max:50',
             'raza' => 'required|string|max:255',
             'detalles' => 'nullable|string|max:1000',
+            'fotoMascota' => 'nullable|image|max:4096',
         ]);
 
         try {
             $data = $validated;
             $data['fecha'] = now()->toIso8601String();
-            $data['estado'] = 'pendiente';
+            $data['estado'] = 'disponible';
             $data['id'] = uniqid('adoption_');
+
+            if ($request->hasFile('fotoMascota')) {
+                $upload = $request->file('fotoMascota');
+                $directory = public_path('uploads/adoptions');
+                if (! is_dir($directory)) {
+                    mkdir($directory, 0755, true);
+                }
+
+                $filename = Str::uuid()->toString().'.'.$upload->getClientOriginalExtension();
+                $upload->move($directory, $filename);
+
+                $data['imagePath'] = 'uploads/adoptions/'.$filename;
+                $data['imageUrl'] = url('uploads/adoptions/'.$filename);
+            }
 
             $created = $this->firebase->create($data, $data['id']);
 
@@ -197,6 +204,8 @@ class AdoptionsController extends Controller
     public function destroy(string $id)
     {
         try {
+            $adoption = $this->firebase->get($id);
+
             $deleted = $this->firebase->delete($id);
 
             if (! $deleted) {
@@ -204,6 +213,13 @@ class AdoptionsController extends Controller
                     'success' => false,
                     'message' => 'Adopción no encontrada'
                 ], 404);
+            }
+
+            if (is_array($adoption) && ! empty($adoption['imagePath'])) {
+                $fullPath = public_path($adoption['imagePath']);
+                if (is_file($fullPath)) {
+                    @unlink($fullPath);
+                }
             }
 
             return response()->json([
@@ -214,6 +230,90 @@ class AdoptionsController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualizar/reemplazar la imagen de una adopción existente
+     */
+    public function updateImage(Request $request, string $id)
+    {
+        $request->validate([
+            'fotoMascota' => 'required|image|max:4096',
+        ]);
+
+        try {
+            $adoption = $this->firebase->get($id);
+
+            if (! is_array($adoption)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Adopción no encontrada'
+                ], 404);
+            }
+
+            if (! $request->hasFile('fotoMascota')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debes seleccionar una imagen válida'
+                ], 422);
+            }
+
+            $upload = $request->file('fotoMascota');
+            if (! $upload || ! $upload->isValid()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El archivo de imagen no es válido'
+                ], 422);
+            }
+
+            $directory = public_path('uploads/adoptions');
+            if (! is_dir($directory)) {
+                mkdir($directory, 0755, true);
+            }
+
+            $filename = Str::uuid()->toString().'.'.$upload->getClientOriginalExtension();
+            $upload->move($directory, $filename);
+
+            $newImagePath = 'uploads/adoptions/'.$filename;
+            $newImageUrl = url($newImagePath);
+
+            $updated = $this->firebase->update($id, [
+                'imagePath' => $newImagePath,
+                'imageUrl' => $newImageUrl,
+            ]);
+
+            if (! $updated) {
+                $newFullPath = public_path($newImagePath);
+                if (is_file($newFullPath)) {
+                    @unlink($newFullPath);
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo actualizar la imagen'
+                ], 422);
+            }
+
+            if (! empty($adoption['imagePath'])) {
+                $oldFullPath = public_path($adoption['imagePath']);
+                if (is_file($oldFullPath)) {
+                    @unlink($oldFullPath);
+                }
+            }
+
+            $fresh = $this->firebase->get($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Imagen actualizada correctamente',
+                'data' => $fresh,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar imagen: '.$e->getMessage(),
             ], 500);
         }
     }

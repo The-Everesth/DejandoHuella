@@ -6,8 +6,8 @@
             </header>
 
             <div class="mb-4 flex gap-4 items-center">
-                <select id="serviceFilter" class="border rounded px-3 py-2">
-                    <option value="">Todos los servicios</option>
+                <select id="serviceFilter" class="border rounded pl-3 pr-10 py-2 min-w-[260px] text-sm font-normal subpixel-antialiased leading-5" style="font-family: Segoe UI, Tahoma, Arial, sans-serif; text-rendering: auto; -webkit-font-smoothing: auto;">
+                    <option value="">Todos los servicios médicos</option>
                 </select>
                 <input id="q" class="border rounded px-3 py-2" placeholder="Buscar por nombre...">
                 <button id="searchBtn" class="bg-teal-700 text-white px-4 py-2 rounded">Buscar</button>
@@ -23,6 +23,8 @@
 </x-app-layout>
 
 <script>
+const INITIAL_SERVICE_ID = new URLSearchParams(window.location.search).get('serviceId') || '';
+
 async function loadServices() {
     try {
         const res = await fetch('/api/medical-services');
@@ -35,6 +37,10 @@ async function loadServices() {
                 opt.textContent = s.name || s.title || s.id;
                 sel.appendChild(opt);
             });
+
+            if (INITIAL_SERVICE_ID) {
+                sel.value = INITIAL_SERVICE_ID;
+            }
         }
     } catch (e) { console.error(e); }
 }

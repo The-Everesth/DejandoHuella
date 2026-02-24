@@ -10,7 +10,6 @@ use App\Http\Controllers\AdoptionPublicController;
 use App\Http\Controllers\MyAdoptionController;
 use App\Http\Controllers\AdoptionRequestController;
 
-use App\Http\Controllers\Public\ServiceBrowserController;
 use App\Http\Controllers\AppointmentController;
 
 use App\Http\Controllers\SupportTicketController;
@@ -21,16 +20,25 @@ use App\Http\Controllers\Admin\MedicalServiceController;
 use App\Http\Controllers\Admin\SupportTicketAdminController;
 
 // Ruta para el formulario de adopciones
-Route::get('/adopciones-form', [AdoptionsController::class, 'form'])->name('adopciones.form');
+Route::view('/adopciones-form', 'adopciones')->name('adopciones.form');
+Route::post('/adopciones-form', [AdoptionsController::class, 'store'])->middleware('auth')->name('adopciones.store');
+Route::delete('/adopciones-form/{id}', [AdoptionsController::class, 'destroy'])
+    ->middleware(['auth', 'role:admin|veterinario|refugio'])
+    ->name('adopciones.destroy');
+Route::post('/adopciones-form/{id}/imagen', [AdoptionsController::class, 'updateImage'])
+    ->middleware(['auth', 'role:admin|veterinario|refugio'])
+    ->name('adopciones.image.update');
 
 // Clinics public pages
 Route::get('/servicios-medicos', [ClinicsController::class, 'catalog'])->name('clinics.catalog');
 Route::get('/servicios-medicos/{id}', [ClinicsController::class, 'showView'])->name('clinics.show');
 
 // Veterinarian panel (single clinic per vet)
-Route::get('/veterinario/clinica', [ClinicsController::class, 'vetForm'])->name('clinics.vet.form');
-Route::post('/veterinario/clinica', [ClinicsController::class, 'store'])->name('clinics.vet.store');
-Route::delete('/veterinario/clinica', [ClinicsController::class, 'destroy'])->name('clinics.vet.destroy');
+Route::middleware(['auth', 'verified', 'role:veterinario|admin'])->group(function () {
+    Route::get('/veterinario/clinica', [ClinicsController::class, 'vetForm'])->name('clinics.vet.form');
+    Route::post('/veterinario/clinica', [ClinicsController::class, 'store'])->name('clinics.vet.store');
+    Route::delete('/veterinario/clinica', [ClinicsController::class, 'destroy'])->name('clinics.vet.destroy');
+});
 use App\Http\Controllers\Vet\ClinicController;
 use App\Http\Controllers\Vet\ClinicServiceController;
 
@@ -211,13 +219,15 @@ Route::get('/adoptions', [AdoptionPublicController::class, 'index'])->name('adop
 Route::get('/adoptions/{post}', [AdoptionPublicController::class, 'show'])->name('adoptions.show');
 
 // SERVICIOS PÚBLICOS (explorar)
-Route::get('/services', [ServiceBrowserController::class, 'index'])->name('services.index');
-Route::get('/services/{service}/clinics', [ServiceBrowserController::class, 'clinics'])->name('services.clinics');
+Route::get('/services', [ClinicsController::class, 'catalog'])->name('services.index');
+Route::get('/services/{service}/clinics', [ClinicsController::class, 'catalogByService'])->name('services.clinics');
 
 // AUTH + VERIFIED (todo lo interno)
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    Route::get('/dashboard', fn () => view('dashboard'))->name('dashboard');
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->name('dashboard');
 
     // Perfil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

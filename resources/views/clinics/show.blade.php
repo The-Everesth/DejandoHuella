@@ -4,9 +4,9 @@
             <div class="bg-white rounded-lg shadow-lg overflow-hidden">
                 <!-- Header -->
                 <div class="bg-gradient-to-r from-teal-600 to-teal-800 p-6 text-white">
-                    <h1 class="text-4xl font-bold">{{ $clinic->name }}</h1>
-                    @if($clinic->user)
-                        <p class="text-teal-100 mt-2">Dr. {{ $clinic->user->name }}</p>
+                    <h1 class="text-4xl font-bold">{{ $clinic['name'] ?? 'Clínica' }}</h1>
+                    @if(!empty($ownerName))
+                        <p class="text-teal-100 mt-2">Dr. {{ $ownerName }}</p>
                     @endif
                 </div>
 
@@ -16,31 +16,31 @@
                     <div>
                         <h2 class="text-2xl font-bold mb-4 text-gray-800">Información</h2>
 
-                        @if($clinic->address)
+                        @if(!empty($clinic['address']))
                             <div class="mb-4 flex items-start gap-3">
                                 <svg class="w-5 h-5 text-teal-600 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M5.5 13a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1 4.5 4.5 0 11-4.814 6.98z"></path>
+                                    <path fill-rule="evenodd" d="M5.05 8.05a4.95 4.95 0 119.9 0c0 2.866-2.91 6.021-4.233 7.278a1.03 1.03 0 01-1.434 0C7.96 14.07 5.05 10.916 5.05 8.05zm4.95-1.8a1.8 1.8 0 100 3.6 1.8 1.8 0 000-3.6z" clip-rule="evenodd"></path>
                                 </svg>
                                 <div>
                                     <p class="text-sm font-medium text-gray-600">Dirección</p>
-                                    <p class="text-gray-800">{{ $clinic->address }}</p>
+                                    <p class="text-gray-800">{{ $clinic['address'] }}</p>
                                 </div>
                             </div>
                         @endif
 
-                        @if($clinic->phone)
+                        @if(!empty($clinic['phone']))
                             <div class="mb-4 flex items-start gap-3">
                                 <svg class="w-5 h-5 text-teal-600 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773c.058.319.105.635.105.954 0 1.668-.728 3.157-1.882 4.122l1.548.773a1 1 0 01.54 1.06l-.74 4.435A1 1 0 015.153 19H3a1 1 0 01-1-1v-2.868a1 1 0 01.05-.196l3.75-9.375A1 1 0 013 7.5V3z"></path>
+                                    <path d="M2.3 3.6c0-.72.58-1.3 1.3-1.3h2.15c.62 0 1.16.44 1.28 1.05l.58 2.9a1.3 1.3 0 01-.75 1.45l-1.05.42a11.9 11.9 0 005.33 5.33l.42-1.05a1.3 1.3 0 011.45-.75l2.9.58c.61.12 1.05.66 1.05 1.28v2.15c0 .72-.58 1.3-1.3 1.3h-1.2C8.43 17 2.3 10.87 2.3 3.6v0z"></path>
                                 </svg>
                                 <div>
                                     <p class="text-sm font-medium text-gray-600">Teléfono</p>
-                                    <p class="text-gray-800">{{ $clinic->phone }}</p>
+                                    <p class="text-gray-800">{{ $clinic['phone'] }}</p>
                                 </div>
                             </div>
                         @endif
 
-                        @if($clinic->email)
+                        @if(!empty($clinic['email']))
                             <div class="mb-4 flex items-start gap-3">
                                 <svg class="w-5 h-5 text-teal-600 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
@@ -48,15 +48,15 @@
                                 </svg>
                                 <div>
                                     <p class="text-sm font-medium text-gray-600">Email</p>
-                                    <p class="text-gray-800">{{ $clinic->email }}</p>
+                                    <p class="text-gray-800">{{ $clinic['email'] }}</p>
                                 </div>
                             </div>
                         @endif
 
-                        @if($clinic->description)
+                        @if(!empty($clinic['description']))
                             <div class="mt-6 p-4 bg-gray-50 rounded-lg">
                                 <p class="text-sm font-medium text-gray-600 mb-2">Descripción</p>
-                                <p class="text-gray-700 whitespace-pre-wrap">{{ $clinic->description }}</p>
+                                <p class="text-gray-700 whitespace-pre-wrap">{{ $clinic['description'] }}</p>
                             </div>
                         @endif
                     </div>
@@ -64,37 +64,13 @@
                     <!-- Services -->
                     <div>
                         <h2 class="text-2xl font-bold mb-4 text-gray-800">Servicios Disponibles</h2>
-                        @if($clinic->services->isNotEmpty())
+                        @if(!empty($clinic['servicesDetailed']) && count($clinic['servicesDetailed']) > 0)
                             <div class="space-y-3">
-                                @foreach($clinic->services as $service)
+                                @foreach($clinic['servicesDetailed'] as $service)
                                     <div class="border border-teal-200 rounded-lg p-4 hover:bg-teal-50 transition">
-                                        <h3 class="font-semibold text-teal-700">{{ $service->name }}</h3>
-                                        <p class="text-sm text-gray-600 mt-1">{{ $service->description }}</p>
-                                        <div class="mt-3 flex items-center justify-between">
-                                            @if($service->pivot->price)
-                                                <span class="text-lg font-bold text-teal-600">
-                                                    ${{ number_format($service->pivot->price, 2) }} {{ $service->pivot->currency ?? 'USD' }}
-                                                </span>
-                                            @endif
-                                            @if($service->pivot->duration_minutes)
-                                                <span class="text-sm text-gray-500">
-                                                    {{ $service->pivot->duration_minutes }} min
-                                                </span>
-                                            @endif
-                                        </div>
-                                        @if($service->pivot->is_available)
-                                            <div class="flex gap-2 mt-3">
-                                                <span class="inline-block px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                                                    Disponible
-                                                </span>
-                                                <a href="{{ route('appointments.create', [$clinic->id, $service->id]) }}" class="ml-auto px-3 py-1 bg-teal-600 text-white text-xs font-semibold rounded hover:bg-teal-700 transition">
-                                                    Agendar
-                                                </a>
-                                            </div>
-                                        @else
-                                            <span class="inline-block mt-2 px-3 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full">
-                                                No disponible
-                                            </span>
+                                        <h3 class="font-semibold text-teal-700">{{ $service['name'] ?? 'Servicio' }}</h3>
+                                        @if(!empty($service['description']))
+                                            <p class="text-sm text-gray-600 mt-1">{{ $service['description'] }}</p>
                                         @endif
                                     </div>
                                 @endforeach

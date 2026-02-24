@@ -34,8 +34,11 @@ use App\Http\Controllers\ClinicsController;
 Route::prefix('clinics')->group(function () {
     Route::get('/', [ClinicsController::class, 'index']);
     Route::get('/{id}', [ClinicsController::class, 'show']);
-    Route::post('/', [ClinicsController::class, 'store']);
-    Route::delete('/', [ClinicsController::class, 'destroy']);
+
+    Route::middleware(['auth:sanctum', 'role:veterinario|admin'])->group(function () {
+        Route::post('/', [ClinicsController::class, 'store']);
+        Route::delete('/', [ClinicsController::class, 'destroy']);
+    });
 });
 
 use App\Services\Firestore\MedicalServicesFirestoreService;

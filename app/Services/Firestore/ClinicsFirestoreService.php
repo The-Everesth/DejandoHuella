@@ -6,8 +6,8 @@ use Illuminate\Support\Facades\Log;
 
 class ClinicsFirestoreService
 {
-    protected FirestoreRestClient $client;
-    protected string $collection = 'clinicas';
+    protected $client;
+    protected $collection = 'clinicas';
 
     public function __construct(FirestoreRestClient $client)
     {
@@ -72,21 +72,31 @@ class ClinicsFirestoreService
         $q = isset($filters['q']) ? mb_strtolower($filters['q']) : null;
 
         foreach ($all as $clinic) {
-            if (isset($clinic['published']) && $clinic['published'] === true) {
-                if ($serviceId) {
-                    $services = $clinic['services'] ?? [];
-                    if (! in_array($serviceId, $services)) {
-                        continue;
-                    }
-                }
-                if ($q) {
-                    $name = mb_strtolower($clinic['name'] ?? '');
-                    if (strpos($name, $q) === false) {
-                        continue;
-                    }
-                }
-                $out[$clinic['id']] = $clinic;
+            $published = false;
+            if (array_key_exists('published', $clinic)) {
+                $published = filter_var($clinic['published'], FILTER_VALIDATE_BOOLEAN);
+            } elseif (array_key_exists('is_public', $clinic)) {
+                $published = filter_var($clinic['is_public'], FILTER_VALIDATE_BOOLEAN);
             }
+
+            if (! $published) {
+                continue;
+            }
+
+            if ($serviceId) {
+                $services = $clinic['services'] ?? [];
+                if (! in_array($serviceId, $services)) {
+                    continue;
+                }
+            }
+            if ($q) {
+                $name = mb_strtolower($clinic['name'] ?? '');
+                if (strpos($name, $q) === false) {
+                    continue;
+                }
+            }
+
+            $out[$clinic['id']] = $clinic;
         }
         return $out;
     }
@@ -111,7 +121,7 @@ class ClinicsFirestoreService
             'website' => $clinic->website,
             'is_public' => (bool)$clinic->is_public,
             'userId' => $clinic->user_id,
-            'createdAt' => $clinic->created_at?->toIso8601String(),
+            'createdAt' => $clinic->created_at ? $clinic->created_at->toIso8601String() : null,
             'updatedAt' => now()->toIso8601String(),
         ];
         
@@ -213,13 +223,13 @@ class ClinicsFirestoreService
     /**
      * Delete clinic only if owner matches
      */
-    public function deleteClinic(string $clinicId, int $ownerUserId): bool
+    public function deleteClinic(string $clinicId, int $ownerUserId, bool $force = false): bool
     {
         $clinic = $this->getClinicById($clinicId);
         if (! $clinic) {
             return false;
         }
-        if (! isset($clinic['ownerUserId']) || (int)$clinic['ownerUserId'] !== $ownerUserId) {
+        if (! $force && (! isset($clinic['ownerUserId']) || (int)$clinic['ownerUserId'] !== $ownerUserId)) {
             throw new \RuntimeException('No autorizado para eliminar esta clínica');
         }
         return $this->client->deleteDoc($this->collection, $clinicId);

@@ -1,24 +1,26 @@
 <x-app-layout>
-    <div class="py-6">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <!-- Page Heading -->
-            <header class="mb-6">
-                <h1 class="text-3xl font-bold text-gray-900">Adopción de Mascotas</h1>
-                <p class="text-gray-600 mt-2">Registra una mascota disponible para adopción</p>
-            </header>
+    @php($canRegisterAdoption = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
+    @php($canManageAdoptionImage = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
+    @php($canDeleteAdoption = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
 
-            <!-- Alert -->
-            <div id="alert" class="mb-4 hidden rounded-lg p-4 text-sm font-medium"></div>
+    <x-slot name="header">
+        <h1 class="text-3xl font-bold text-gray-900">Adopción de Mascotas</h1>
+        <p class="text-gray-600 mt-2">Registra una mascota disponible para adopción</p>
+    </x-slot>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Alert -->
+                <div id="alert" class="mb-4 hidden rounded-lg p-4 text-sm font-medium">
+                </div>
+
+                <div class="grid grid-cols-1 {{ $canRegisterAdoption ? 'lg:grid-cols-2' : '' }} gap-8">
+                    @if($canRegisterAdoption)
                     <!-- Form Card -->
-                    @auth
-                        @role('refugio')
-                            <div class="bg-white rounded-lg shadow">
-                                <div class="p-6">
-                                    <h2 class="text-xl font-bold text-gray-900 mb-6">Registro de mascota</h2>
+                    <div class="bg-white rounded-lg shadow">
+                        <div class="p-6">
+                            <h2 class="text-xl font-bold text-gray-900 mb-6">Registro de mascota</h2>
+                            <div id="formAccessNotice" class="mb-4 hidden rounded-lg p-3 text-sm font-medium"></div>
 
-                                    <form id="adopcionForm" class="space-y-4">
+                            <form id="adopcionForm" class="space-y-4">
                                 <div>
                                     <label for="nombreAnimal" class="block text-sm font-medium text-gray-700 mb-1">
                                         Nombre del animal <span class="text-red-500">*</span>
@@ -95,6 +97,19 @@
                                     ></textarea>
                                 </div>
 
+                                <div>
+                                    <label for="fotoMascota" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Foto de la mascota
+                                    </label>
+                                    <input
+                                        type="file"
+                                        id="fotoMascota"
+                                        name="fotoMascota"
+                                        accept="image/*"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-700 focus:border-transparent"
+                                    >
+                                </div>
+
                                 <button 
                                     type="submit" 
                                     class="w-full bg-[#F5E7DA] text-black font-bold py-3 px-4 rounded-full hover:opacity-90 transition"
@@ -104,26 +119,7 @@
                             </form>
                         </div>
                     </div>
-                        @else
-                            <div class="bg-red-50 rounded-lg shadow border border-red-200">
-                                <div class="p-6">
-                                    <h2 class="text-xl font-bold text-red-900 mb-4">Acceso denegado</h2>
-                                    <p class="text-red-800 mb-4">Solo los refugios registrados pueden publicar mascotas para adopción.</p>
-                                    <p class="text-gray-700">Si eres un refugio, contacta al administrador para solicitar este acceso.</p>
-                                </div>
-                            </div>
-                        @endrole
-                    @else
-                        <div class="bg-blue-50 rounded-lg shadow border border-blue-200">
-                            <div class="p-6">
-                                <h2 class="text-xl font-bold text-blue-900 mb-4">Inicia sesión para registrar mascotas</h2>
-                                <p class="text-blue-800 mb-6">Si eres parte de un refugio, inicia sesión para publicar mascotas disponibles para adopción.</p>
-                                <a href="{{ route('login') }}" class="inline-block bg-[#F5E7DA] text-black font-bold py-3 px-6 rounded-full hover:opacity-90 transition">
-                                    Iniciar sesión
-                                </a>
-                            </div>
-                        </div>
-                    @endauth
+                    @endif
 
                     <!-- List Card -->
                     <div class="bg-white rounded-lg shadow-lg border border-slate-100">
@@ -141,13 +137,53 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</x-app-layout>
 
-<script>
-        const API_URL = '/api/adoptions';
+                <div id="imagePreviewModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/70 p-4">
+                    <div class="relative w-full max-w-3xl rounded-2xl bg-white p-3 shadow-xl">
+                        <button id="closeImagePreviewModal" type="button" class="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-100" aria-label="Cerrar vista previa">
+                            ✕
+                        </button>
+                        <img id="imagePreviewModalImg" src="" alt="Vista previa" class="max-h-[80vh] w-full rounded-xl object-contain">
+                    </div>
+                </div>
+
+    <script>
+        const API_URL = @json(url('/api/adoptions'));
+        const STORE_URL = @json(route('adopciones.store'));
+        const DELETE_URL_TEMPLATE = @json(route('adopciones.destroy', ['id' => '__ID__']));
+        const UPDATE_IMAGE_URL_TEMPLATE = @json(route('adopciones.image.update', ['id' => '__ID__']));
+        const IS_AUTHENTICATED = @json(auth()->check());
+        const IS_REFUGIO = @json(auth()->check() && auth()->user()->hasRole('refugio'));
+        const CAN_MANAGE_ADOPTION_IMAGE = @json($canManageAdoptionImage);
+        const CAN_DELETE_ADOPTION = @json($canDeleteAdoption);
+        const CAN_REGISTER_ADOPTION = @json($canRegisterAdoption);
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const IMAGE_PREVIEW_MODAL = document.getElementById('imagePreviewModal');
+        const IMAGE_PREVIEW_MODAL_IMG = document.getElementById('imagePreviewModalImg');
+        const CLOSE_IMAGE_PREVIEW_MODAL = document.getElementById('closeImagePreviewModal');
+
+        function openImagePreview(imageUrl, imageAlt = 'Vista previa') {
+            if (!IMAGE_PREVIEW_MODAL || !IMAGE_PREVIEW_MODAL_IMG || !imageUrl) {
+                return;
+            }
+
+            IMAGE_PREVIEW_MODAL_IMG.src = imageUrl;
+            IMAGE_PREVIEW_MODAL_IMG.alt = imageAlt;
+            IMAGE_PREVIEW_MODAL.classList.remove('hidden');
+            IMAGE_PREVIEW_MODAL.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeImagePreview() {
+            if (!IMAGE_PREVIEW_MODAL || !IMAGE_PREVIEW_MODAL_IMG) {
+                return;
+            }
+
+            IMAGE_PREVIEW_MODAL.classList.add('hidden');
+            IMAGE_PREVIEW_MODAL.classList.remove('flex');
+            IMAGE_PREVIEW_MODAL_IMG.src = '';
+            document.body.classList.remove('overflow-hidden');
+        }
 
         // Función para mostrar alertas con Tailwind
         function showAlert(message, type) {
@@ -169,6 +205,31 @@
             }
         }
 
+        function setupFormAccess() {
+            const form = document.getElementById('adopcionForm');
+            const notice = document.getElementById('formAccessNotice');
+
+            if (!form || !notice) {
+                return;
+            }
+
+            if (IS_AUTHENTICATED) {
+                notice.classList.add('hidden');
+                form.querySelectorAll('input, select, textarea, button').forEach((element) => {
+                    element.disabled = false;
+                });
+                return;
+            }
+
+            notice.textContent = 'Inicia sesión para poder registrar mascotas en adopción.';
+            notice.className = 'mb-4 rounded-lg p-3 text-sm font-medium bg-amber-50 text-amber-800 border border-amber-200';
+            notice.classList.remove('hidden');
+
+            form.querySelectorAll('input, select, textarea, button').forEach((element) => {
+                element.disabled = true;
+            });
+        }
+
         // Función para cargar adopciones desde la API
         async function loadAdopciones() {
             const adopcionList = document.getElementById('adopcionList');
@@ -181,9 +242,15 @@
                     adopcionList.innerHTML = '';
                     
                     // Convertir objeto a array y ordenar por fecha
-                    const adopcionesArray = Array.isArray(result.data) 
-                        ? result.data
-                        : Object.entries(result.data).map(([id, data]) => ({ id, ...data }));
+                    const adopcionesArray = Array.isArray(result.data)
+                        ? result.data.map((item) => ({
+                            ...item,
+                            id: item?.id || item?._docId || '',
+                        }))
+                        : Object.entries(result.data).map(([id, data]) => ({
+                            ...data,
+                            id: data?.id || data?._docId || id,
+                        }));
 
                     adopcionesArray.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
@@ -193,7 +260,10 @@
                     }
 
                     adopcionesArray.forEach((adopcion) => {
+                        const adoptionId = adopcion.id || adopcion._docId || '';
                         const fecha = new Date(adopcion.fecha).toLocaleDateString('es-ES');
+                        const canDelete = Boolean(adoptionId) && CAN_DELETE_ADOPTION;
+                        const canChangeImage = Boolean(adoptionId) && CAN_MANAGE_ADOPTION_IMAGE;
                         const html = `
                             <div class="group p-4 rounded-2xl border bg-teal-50 hover:shadow-md transition-all duration-200 cursor-pointer">
                                 <div class="flex items-start justify-between mb-3">
@@ -201,19 +271,43 @@
                                         <h3 class="text-lg font-extrabold text-gray-900">${adopcion.nombreAnimal}</h3>
                                         <p class="text-sm text-gray-600">${adopcion.tipoAnimal}</p>
                                     </div>
-                                    <span class="inline-block bg-teal-700 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-sm">${adopcion.estado}</span>
+                                    ${CAN_MANAGE_ADOPTION_IMAGE || CAN_DELETE_ADOPTION ? `<div class="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            class="change-image inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold border border-blue-200 bg-white text-blue-700 hover:bg-blue-50 transition ${canChangeImage ? '' : 'opacity-50 cursor-not-allowed'}"
+                                            data-id="${adoptionId}"
+                                            ${canChangeImage ? '' : 'disabled'}
+                                        >
+                                            Cambiar foto
+                                        </button>
+                                        ${CAN_DELETE_ADOPTION ? `<button
+                                            type="button"
+                                            class="delete-adopcion inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold border border-red-200 bg-white text-red-700 hover:bg-red-50 transition ${canDelete ? '' : 'opacity-50 cursor-not-allowed'}"
+                                            data-id="${adoptionId}"
+                                            ${canDelete ? '' : 'disabled'}
+                                        >
+                                            Eliminar
+                                        </button>` : ''}
+                                    </div>` : ''}
                                 </div>
-                                <div class="grid grid-cols-2 gap-3 mb-3">
-                                    <div>
-                                        <span class="text-sm text-gray-700"><strong>Edad:</strong> ${adopcion.edad} año${adopcion.edad != 1 ? 's' : ''}</span>
+                                <div class="mb-3 flex items-start gap-4">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="grid grid-cols-2 gap-3 mb-3">
+                                            <div>
+                                                <span class="text-sm text-gray-700"><strong>Edad:</strong> ${adopcion.edad} año${adopcion.edad != 1 ? 's' : ''}</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-sm text-gray-700"><strong>Raza:</strong> ${adopcion.raza}</span>
+                                            </div>
+                                        </div>
+                                        ${adopcion.detalles ? `<div class="bg-white rounded-lg p-3 border">
+                                            <p class="text-sm text-gray-600"><strong class="text-gray-900">Detalles:</strong> ${adopcion.detalles}</p>
+                                        </div>` : ''}
                                     </div>
-                                    <div>
-                                        <span class="text-sm text-gray-700"><strong>Raza:</strong> ${adopcion.raza}</span>
-                                    </div>
+                                    ${adopcion.imageUrl ? `<div class="h-28 w-28 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-white sm:h-32 sm:w-32">
+                                        <img src="${adopcion.imageUrl}" alt="Foto de ${adopcion.nombreAnimal}" class="preview-image h-full w-full cursor-zoom-in object-cover" data-full-image="${adopcion.imageUrl}" data-image-alt="Foto de ${adopcion.nombreAnimal}">
+                                    </div>` : ''}
                                 </div>
-                                ${adopcion.detalles ? `<div class="bg-white rounded-lg p-3 mb-3 border">
-                                    <p class="text-sm text-gray-600"><strong class="text-gray-900">Detalles:</strong> ${adopcion.detalles}</p>
-                                </div>` : ''}
                                 <div class="flex items-center justify-between pt-3 border-t border-teal-200">
                                     <span class="text-xs text-gray-600">Registrado el ${fecha}</span>
                                 </div>
@@ -231,20 +325,179 @@
         }
 
         // Cargar adopciones al iniciar
+        setupFormAccess();
         loadAdopciones();
 
         // Recargar adopciones cada 3 segundos
         setInterval(loadAdopciones, 3000);
 
+        if (CLOSE_IMAGE_PREVIEW_MODAL) {
+            CLOSE_IMAGE_PREVIEW_MODAL.addEventListener('click', closeImagePreview);
+        }
+
+        if (IMAGE_PREVIEW_MODAL) {
+            IMAGE_PREVIEW_MODAL.addEventListener('click', function (event) {
+                if (event.target === IMAGE_PREVIEW_MODAL) {
+                    closeImagePreview();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeImagePreview();
+            }
+        });
+
+        // Eliminar adopción registrada
+        document.getElementById('adopcionList').addEventListener('click', async function (event) {
+            const previewImage = event.target.closest('.preview-image');
+            if (previewImage) {
+                openImagePreview(previewImage.dataset.fullImage || previewImage.src, previewImage.dataset.imageAlt || previewImage.alt || 'Vista previa');
+                return;
+            }
+
+            const imageBtn = event.target.closest('.change-image');
+            if (imageBtn && !imageBtn.disabled) {
+                if (!IS_AUTHENTICATED) {
+                    showAlert('Debes iniciar sesión para actualizar imágenes', 'error');
+                    return;
+                }
+
+                if (!CAN_MANAGE_ADOPTION_IMAGE) {
+                    showAlert('No tienes permisos para actualizar imágenes', 'error');
+                    return;
+                }
+
+                const adoptionId = imageBtn.dataset.id;
+                if (!adoptionId) {
+                    showAlert('No se pudo identificar la adopción', 'error');
+                    return;
+                }
+
+                const picker = document.createElement('input');
+                picker.type = 'file';
+                picker.accept = 'image/*';
+
+                picker.addEventListener('change', async () => {
+                    const file = picker.files?.[0];
+                    if (!file) {
+                        return;
+                    }
+
+                    const originalText = imageBtn.textContent;
+                    imageBtn.disabled = true;
+                    imageBtn.textContent = 'Subiendo...';
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('fotoMascota', file);
+
+                        const updateUrl = UPDATE_IMAGE_URL_TEMPLATE.replace('__ID__', encodeURIComponent(adoptionId));
+                        const response = await fetch(updateUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': CSRF_TOKEN || '',
+                            },
+                            body: formData,
+                        });
+
+                        const result = await response.json().catch(() => ({}));
+                        if (!response.ok || !result.success) {
+                            showAlert('Error: ' + (result.message || 'No se pudo actualizar la imagen'), 'error');
+                            return;
+                        }
+
+                        showAlert('Imagen actualizada correctamente', 'success');
+                        loadAdopciones();
+                    } catch (error) {
+                        showAlert('Error: ' + error.message, 'error');
+                    } finally {
+                        imageBtn.disabled = false;
+                        imageBtn.textContent = originalText;
+                    }
+                });
+
+                picker.click();
+                return;
+            }
+
+            const btn = event.target.closest('.delete-adopcion');
+            if (!btn || btn.disabled) return;
+
+            if (!IS_AUTHENTICATED) {
+                showAlert('Debes iniciar sesión para eliminar adopciones', 'error');
+                return;
+            }
+
+            if (!CAN_DELETE_ADOPTION) {
+                showAlert('No tienes permisos para eliminar adopciones', 'error');
+                return;
+            }
+
+            const adoptionId = btn.dataset.id;
+            if (!adoptionId) {
+                showAlert('No se pudo identificar la adopción a eliminar', 'error');
+                return;
+            }
+
+            if (!confirm('¿Seguro que quieres eliminar esta adopción?')) {
+                return;
+            }
+
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Eliminando...';
+
+            try {
+                const deleteUrl = DELETE_URL_TEMPLATE.replace('__ID__', encodeURIComponent(adoptionId));
+                const response = await fetch(deleteUrl, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': CSRF_TOKEN || '',
+                    },
+                });
+
+                const result = await response.json().catch(() => ({}));
+
+                if (response.ok && result.success) {
+                    showAlert('Adopción eliminada correctamente', 'success');
+                    loadAdopciones();
+                } else {
+                    showAlert('Error: ' + (result.message || 'No se pudo eliminar la adopción'), 'error');
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
+
         // Agregar evento para el formulario
-        document.getElementById('adopcionForm').addEventListener('submit', async function (event) {
-            event.preventDefault();
+        const adopcionForm = document.getElementById('adopcionForm');
+        if (adopcionForm) {
+            adopcionForm.addEventListener('submit', async function (event) {
+                if (!CAN_REGISTER_ADOPTION) {
+                    return;
+                }
+
+                event.preventDefault();
+
+            if (!IS_AUTHENTICATED) {
+                showAlert('Debes iniciar sesión para registrar una adopción', 'error');
+                return;
+            }
 
             const nombreAnimal = document.getElementById('nombreAnimal').value.trim();
             const tipoAnimal = document.getElementById('tipoAnimal').value;
             const edad = document.getElementById('edad').value;
             const raza = document.getElementById('raza').value.trim();
             const detalles = document.getElementById('detalles').value.trim();
+            const fotoMascota = document.getElementById('fotoMascota').files[0];
 
             // Validaciones básicas
             if (!nombreAnimal || !raza || !edad || !tipoAnimal) {
@@ -263,20 +516,24 @@
             btn.textContent = 'Registrando...';
 
             try {
-                const response = await fetch(API_URL, {
+                const formData = new FormData();
+                formData.append('nombreAnimal', nombreAnimal);
+                formData.append('tipoAnimal', tipoAnimal);
+                formData.append('edad', edad);
+                formData.append('raza', raza);
+                formData.append('detalles', detalles || '');
+
+                if (fotoMascota) {
+                    formData.append('fotoMascota', fotoMascota);
+                }
+
+                const response = await fetch(STORE_URL, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'X-CSRF-TOKEN': CSRF_TOKEN || '',
                     },
-                    body: JSON.stringify({
-                        nombreAnimal,
-                        tipoAnimal,
-                        edad: parseInt(edad),
-                        raza,
-                        detalles: detalles || '',
-                    })
+                    body: formData
                 });
 
                 const result = await response.json();
@@ -295,5 +552,7 @@
                 btn.disabled = false;
                 btn.textContent = 'Registrar Adopción';
             }
-        });
+            });
+        }
     </script>
+</x-app-layout>
