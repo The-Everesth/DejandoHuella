@@ -18,8 +18,9 @@
 
                         @if($clinic->address)
                             <div class="mb-4 flex items-start gap-3">
-                                <svg class="w-5 h-5 text-teal-600 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M5.5 13a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1 4.5 4.5 0 11-4.814 6.98z"></path>
+                                <svg class="w-5 h-5 text-teal-600 mt-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-6-5.38-6-10a6 6 0 1112 0c0 4.62-6 10-6 10z"></path>
+                                    <circle cx="12" cy="11" r="2.5"></circle>
                                 </svg>
                                 <div>
                                     <p class="text-sm font-medium text-gray-600">Dirección</p>
@@ -30,8 +31,8 @@
 
                         @if($clinic->phone)
                             <div class="mb-4 flex items-start gap-3">
-                                <svg class="w-5 h-5 text-teal-600 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773c.058.319.105.635.105.954 0 1.668-.728 3.157-1.882 4.122l1.548.773a1 1 0 01.54 1.06l-.74 4.435A1 1 0 015.153 19H3a1 1 0 01-1-1v-2.868a1 1 0 01.05-.196l3.75-9.375A1 1 0 013 7.5V3z"></path>
+                                <svg class="w-5 h-5 text-teal-600 mt-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M22 16.92v3a2 2 0 01-2.18 2 19.8 19.8 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.8 19.8 0 012.08 4.2 2 2 0 014.06 2h3a2 2 0 012 1.72c.12.95.33 1.89.64 2.79a2 2 0 01-.45 2.11L8 10a16 16 0 006 6l1.38-1.25a2 2 0 012.11-.45c.9.31 1.84.52 2.79.64A2 2 0 0122 16.92z"></path>
                                 </svg>
                                 <div>
                                     <p class="text-sm font-medium text-gray-600">Teléfono</p>
@@ -42,9 +43,9 @@
 
                         @if($clinic->email)
                             <div class="mb-4 flex items-start gap-3">
-                                <svg class="w-5 h-5 text-teal-600 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
-                                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
+                                <svg class="w-5 h-5 text-teal-600 mt-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M22 7l-10 7L2 7"></path>
                                 </svg>
                                 <div>
                                     <p class="text-sm font-medium text-gray-600">Email</p>
