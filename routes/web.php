@@ -3,12 +3,10 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PetController;
+use App\Http\Controllers\AdoptionsController;
 
-use App\Http\Controllers\AdoptionPublicController;
-use App\Http\Controllers\MyAdoptionController;
-use App\Http\Controllers\AdoptionRequestController;
 
-use App\Http\Controllers\Public\ServiceBrowserController;
+use App\Http\Controllers\PublicSite\ServiceBrowserController;
 use App\Http\Controllers\AppointmentController;
 
 use App\Http\Controllers\SupportTicketController;
@@ -19,10 +17,14 @@ use App\Http\Controllers\Admin\MedicalServiceController;
 use App\Http\Controllers\Admin\SupportTicketAdminController;
 
 // Ruta para el formulario de adopciones
-Route::get('/adopciones', function () {
-    return view('adopciones');
-});
 Route::view('/adopciones-form', 'adopciones')->name('adopciones.form');
+Route::post('/adopciones-form', [AdoptionsController::class, 'store'])->middleware('auth')->name('adopciones.store');
+Route::delete('/adopciones-form/{id}', [AdoptionsController::class, 'destroy'])
+    ->middleware(['auth', 'role:admin|veterinario|refugio'])
+    ->name('adopciones.destroy');
+Route::post('/adopciones-form/{id}/imagen', [AdoptionsController::class, 'updateImage'])
+    ->middleware(['auth', 'role:admin|veterinario|refugio'])
+    ->name('adopciones.image.update');
 use App\Http\Controllers\Vet\ClinicController;
 use App\Http\Controllers\Vet\ClinicServiceController;
 
@@ -64,9 +66,9 @@ Route::get('/test/firestore/create-appointment', function (AppointmentsFirestore
 
 // --- fin de rutas de prueba ------------------------------------------------------------------
 
-//ADOPCIONES PÚBLICAS (solo ver)
-Route::get('/adoptions', [AdoptionPublicController::class, 'index'])->name('adoptions.index');
-Route::get('/adoptions/{post}', [AdoptionPublicController::class, 'show'])->name('adoptions.show');
+// ADOPCIONES (unificado en Firebase)
+Route::redirect('/adoptions', '/adopciones-form', 301)->name('adoptions.index');
+Route::redirect('/adoptions/{any}', '/adopciones-form', 301)->where('any', '.*')->name('adoptions.show');
 
 // SERVICIOS PÚBLICOS (explorar)
 Route::get('/services', [ServiceBrowserController::class, 'index'])->name('services.index');
@@ -75,7 +77,9 @@ Route::get('/services/{service}/clinics', [ServiceBrowserController::class, 'cli
 // AUTH + VERIFIED (todo lo interno)
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    Route::get('/dashboard', fn () => view('dashboard'))->name('dashboard');
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->name('dashboard');
 
     // Perfil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -85,17 +89,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Mascotas (dueños)
     Route::resource('pets', PetController::class);
 
-    // Mis publicaciones adopción (requiere login)
-    Route::get('/my/adoptions', [MyAdoptionController::class, 'index'])->name('myadoptions.index');
-    Route::get('/my/adoptions/create', [MyAdoptionController::class, 'create'])->name('myadoptions.create');
-    Route::post('/my/adoptions', [MyAdoptionController::class, 'store'])->name('myadoptions.store');
-    Route::patch('/my/adoptions/{post}/toggle', [MyAdoptionController::class, 'toggle'])->name('myadoptions.toggle');
-    Route::get('/my/adoptions/{post}/requests', [MyAdoptionController::class, 'requests'])->name('myadoptions.requests');
+    // Adopciones legacy (antes MySQL) -> redirigir al flujo Firebase
+    Route::redirect('/my/adoptions', '/adopciones-form', 302)->name('myadoptions.index');
+    Route::redirect('/my/adoptions/create', '/adopciones-form', 302)->name('myadoptions.create');
+    Route::post('/my/adoptions', function () {
+        return redirect()->route('adopciones.form');
+    })->name('myadoptions.store');
+    Route::patch('/my/adoptions/{post}/toggle', function () {
+        return redirect()->route('adopciones.form');
+    })->name('myadoptions.toggle');
+    Route::redirect('/my/adoptions/{post}/requests', '/adopciones-form', 302)->name('myadoptions.requests');
 
-    // Solicitudes adopción (requiere login)
-    Route::post('/adoptions/{post}/request', [AdoptionRequestController::class, 'store'])->name('adoptions.request.store');
-    Route::get('/my/requests', [AdoptionRequestController::class, 'myRequests'])->name('myrequests.index');
-    Route::patch('/requests/{adoptionRequest}/status', [AdoptionRequestController::class, 'setStatus'])->name('requests.status');
+    Route::post('/adoptions/{post}/request', function () {
+        return redirect()->route('adopciones.form');
+    })->name('adoptions.request.store');
+    Route::redirect('/my/requests', '/adopciones-form', 302)->name('myrequests.index');
+    Route::patch('/requests/{adoptionRequest}/status', function () {
+        return redirect()->route('adopciones.form');
+    })->name('requests.status');
 
     // Citas (ciudadano)
     Route::get('/appointments/create/{clinic}/{service}', [AppointmentController::class, 'create'])->name('appointments.create');

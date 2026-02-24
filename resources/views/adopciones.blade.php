@@ -1,78 +1,19 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Adopciones</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: '#0d9488',
-                        brandSoft: '#F5E7DA',
-                        brandNavy: '#243B6B',
-                    },
-                    fontFamily: {
-                        sans: ['Figtree', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-</head>
-<body class="font-sans antialiased bg-slate-50 text-slate-900">
-    <!-- Layout wrapper: full height + column -->
-    <div class="min-h-screen flex flex-col">
-        <!-- Navigation -->
-        <nav class="bg-teal-700 text-black">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-16">
-                    <div class="flex items-center">
-                        <a href="/" class="flex items-center gap-2">
-                            <span class="inline-flex items-center justify-center h-10 w-10 rounded-full bg-white/10">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 10.5c1.38 0 2.5-1.12 2.5-2.5S13.38 5.5 12 5.5 9.5 6.62 9.5 8s1.12 2.5 2.5 2.5z"/>
-                                    <path d="M12 12c-3.31 0-6 2.69-6 6h2a4 4 0 018 0h2c0-3.31-2.69-6-6-6z"/>
-                                </svg>
-                            </span>
-                            <span class="tracking-wide leading-none">
-                                DEJANDO<br>HUELLA
-                            </span>
-                        </a>
-                    </div>
-                    <div class="flex items-center gap-8 text-base absolute left-1/2 transform -translate-x-1/2">
-                        <a href="{{ url('/') }}" class="hover:text-white/80 transition">Inicio</a>
-                        <a href="{{ route('adopciones.form') }}" class="hover:text-white/80 transition">Adopción</a>
-                        <a href="#" class="hover:text-white/80 transition">Servicios Medicos</a>
-                    </div>
-                    <div class="flex items-center">
-                        <a href="{{ route('login') }}" class="bg-[#F5E7DA] text-black px-8 py-2 rounded-full hover:opacity-90 transition">
-                            Iniciar sesión
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </nav>
+<x-app-layout>
+    @php($canRegisterAdoption = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
+    @php($canManageAdoptionImage = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
+    @php($canDeleteAdoption = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
 
-        <!-- Page Heading -->
-        <header class="bg-white shadow">
-            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                <h1 class="text-3xl font-bold text-gray-900">Adopción de Mascotas</h1>
-                <p class="text-gray-600 mt-2">Registra una mascota disponible para adopción</p>
-            </div>
-        </header>
+    <x-slot name="header">
+        <h1 class="text-3xl font-bold text-gray-900">Adopción de Mascotas</h1>
+        <p class="text-gray-600 mt-2">Registra una mascota disponible para adopción</p>
+    </x-slot>
 
-        <!-- Page Content -->
-        <main class="flex-1">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 <!-- Alert -->
                 <div id="alert" class="mb-4 hidden rounded-lg p-4 text-sm font-medium">
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="grid grid-cols-1 {{ $canRegisterAdoption ? 'lg:grid-cols-2' : '' }} gap-8">
+                    @if($canRegisterAdoption)
                     <!-- Form Card -->
                     <div class="bg-white rounded-lg shadow">
                         <div class="p-6">
@@ -156,6 +97,19 @@
                                     ></textarea>
                                 </div>
 
+                                <div>
+                                    <label for="fotoMascota" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Foto de la mascota
+                                    </label>
+                                    <input
+                                        type="file"
+                                        id="fotoMascota"
+                                        name="fotoMascota"
+                                        accept="image/*"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-700 focus:border-transparent"
+                                    >
+                                </div>
+
                                 <button 
                                     type="submit" 
                                     class="w-full bg-[#F5E7DA] text-black font-bold py-3 px-4 rounded-full hover:opacity-90 transition"
@@ -165,6 +119,7 @@
                             </form>
                         </div>
                     </div>
+                    @endif
 
                     <!-- List Card -->
                     <div class="bg-white rounded-lg shadow-lg border border-slate-100">
@@ -182,67 +137,53 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </main>
 
-        <!-- Footer -->
-        <footer class="bg-teal-700 text-black">
-            <div class="max-w-7xl mx-auto px-6 lg:px-8 py-10 grid grid-cols-1 md:grid-cols-3 gap-10">
-
-                <div>
-                    <h3 class="text-2xl font-bold mb-4">Información Animal</h3>
-                    <ul class="space-y-3 text-white/90 font-semibold">
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            Alimentación Animal
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            Enfermedades comunes
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            Esterilización/Vacunación
-                        </li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-bold mb-4">Información de contacto</h3>
-                    <ul class="space-y-3 text-white/90 font-semibold">
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            Blvd de la Juventud 1006A, Solares 20 de Noviembre, 34288 Durango, Dgo.
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            +52 618 - 137 - 8344
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="md:text-right">
-                    <h3 class="text-2xl font-bold mb-4">Redes Sociales</h3>
-                    <div class="flex md:justify-end gap-6">
-                        <a href="#" class="h-14 w-14 rounded-full bg-[#243B6B] flex items-center justify-center hover:opacity-90 transition" aria-label="Facebook">
-                            <span class="text-2xl font-black">f</span>
-                        </a>
-                        <a href="#" class="h-14 w-14 rounded-full bg-[#243B6B] flex items-center justify-center hover:opacity-90 transition" aria-label="Email">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
-                            </svg>
-                        </a>
+                <div id="imagePreviewModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/70 p-4">
+                    <div class="relative w-full max-w-3xl rounded-2xl bg-white p-3 shadow-xl">
+                        <button id="closeImagePreviewModal" type="button" class="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-100" aria-label="Cerrar vista previa">
+                            ✕
+                        </button>
+                        <img id="imagePreviewModalImg" src="" alt="Vista previa" class="max-h-[80vh] w-full rounded-xl object-contain">
                     </div>
                 </div>
 
-            </div>
-        </footer>
-    </div>
-
     <script>
         const API_URL = '/api/adoptions';
+        const STORE_URL = @json(route('adopciones.store'));
+        const DELETE_URL_TEMPLATE = @json(route('adopciones.destroy', ['id' => '__ID__']));
+        const UPDATE_IMAGE_URL_TEMPLATE = @json(route('adopciones.image.update', ['id' => '__ID__']));
         const IS_AUTHENTICATED = @json(auth()->check());
         const IS_REFUGIO = @json(auth()->check() && auth()->user()->hasRole('refugio'));
+        const CAN_MANAGE_ADOPTION_IMAGE = @json($canManageAdoptionImage);
+        const CAN_DELETE_ADOPTION = @json($canDeleteAdoption);
+        const CAN_REGISTER_ADOPTION = @json($canRegisterAdoption);
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const IMAGE_PREVIEW_MODAL = document.getElementById('imagePreviewModal');
+        const IMAGE_PREVIEW_MODAL_IMG = document.getElementById('imagePreviewModalImg');
+        const CLOSE_IMAGE_PREVIEW_MODAL = document.getElementById('closeImagePreviewModal');
+
+        function openImagePreview(imageUrl, imageAlt = 'Vista previa') {
+            if (!IMAGE_PREVIEW_MODAL || !IMAGE_PREVIEW_MODAL_IMG || !imageUrl) {
+                return;
+            }
+
+            IMAGE_PREVIEW_MODAL_IMG.src = imageUrl;
+            IMAGE_PREVIEW_MODAL_IMG.alt = imageAlt;
+            IMAGE_PREVIEW_MODAL.classList.remove('hidden');
+            IMAGE_PREVIEW_MODAL.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeImagePreview() {
+            if (!IMAGE_PREVIEW_MODAL || !IMAGE_PREVIEW_MODAL_IMG) {
+                return;
+            }
+
+            IMAGE_PREVIEW_MODAL.classList.add('hidden');
+            IMAGE_PREVIEW_MODAL.classList.remove('flex');
+            IMAGE_PREVIEW_MODAL_IMG.src = '';
+            document.body.classList.remove('overflow-hidden');
+        }
 
         // Función para mostrar alertas con Tailwind
         function showAlert(message, type) {
@@ -267,25 +208,26 @@
         function setupFormAccess() {
             const form = document.getElementById('adopcionForm');
             const notice = document.getElementById('formAccessNotice');
-            const submitBtn = form.querySelector('button[type="submit"]');
 
-            if (IS_REFUGIO) {
-                notice.classList.add('hidden');
+            if (!form || !notice) {
                 return;
             }
 
-            const message = IS_AUTHENTICATED
-                ? 'Tu cuenta no tiene permisos para publicar. Solo usuarios con rol refugio pueden registrar adopciones.'
-                : 'Inicia sesión con una cuenta de refugio para publicar mascotas en adopción.';
+            if (IS_AUTHENTICATED) {
+                notice.classList.add('hidden');
+                form.querySelectorAll('input, select, textarea, button').forEach((element) => {
+                    element.disabled = false;
+                });
+                return;
+            }
 
-            notice.textContent = message;
+            notice.textContent = 'Inicia sesión para poder registrar mascotas en adopción.';
             notice.className = 'mb-4 rounded-lg p-3 text-sm font-medium bg-amber-50 text-amber-800 border border-amber-200';
             notice.classList.remove('hidden');
 
             form.querySelectorAll('input, select, textarea, button').forEach((element) => {
                 element.disabled = true;
             });
-            submitBtn.textContent = 'Solo refugios pueden publicar';
         }
 
         // Función para cargar adopciones desde la API
@@ -300,9 +242,15 @@
                     adopcionList.innerHTML = '';
                     
                     // Convertir objeto a array y ordenar por fecha
-                    const adopcionesArray = Array.isArray(result.data) 
-                        ? result.data
-                        : Object.entries(result.data).map(([id, data]) => ({ ...data, id }));
+                    const adopcionesArray = Array.isArray(result.data)
+                        ? result.data.map((item) => ({
+                            ...item,
+                            id: item?.id || item?._docId || '',
+                        }))
+                        : Object.entries(result.data).map(([id, data]) => ({
+                            ...data,
+                            id: data?.id || data?._docId || id,
+                        }));
 
                     adopcionesArray.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
@@ -312,8 +260,10 @@
                     }
 
                     adopcionesArray.forEach((adopcion) => {
+                        const adoptionId = adopcion.id || adopcion._docId || '';
                         const fecha = new Date(adopcion.fecha).toLocaleDateString('es-ES');
-                        const canDelete = Boolean(adopcion.id);
+                        const canDelete = Boolean(adoptionId) && CAN_DELETE_ADOPTION;
+                        const canChangeImage = Boolean(adoptionId) && CAN_MANAGE_ADOPTION_IMAGE;
                         const html = `
                             <div class="group p-4 rounded-2xl border bg-teal-50 hover:shadow-md transition-all duration-200 cursor-pointer">
                                 <div class="flex items-start justify-between mb-3">
@@ -321,28 +271,43 @@
                                         <h3 class="text-lg font-extrabold text-gray-900">${adopcion.nombreAnimal}</h3>
                                         <p class="text-sm text-gray-600">${adopcion.tipoAnimal}</p>
                                     </div>
-                                    <div class="flex items-center gap-2">
+                                    ${CAN_MANAGE_ADOPTION_IMAGE || CAN_DELETE_ADOPTION ? `<div class="flex items-center gap-2">
                                         <button
                                             type="button"
+                                            class="change-image inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold border border-blue-200 bg-white text-blue-700 hover:bg-blue-50 transition ${canChangeImage ? '' : 'opacity-50 cursor-not-allowed'}"
+                                            data-id="${adoptionId}"
+                                            ${canChangeImage ? '' : 'disabled'}
+                                        >
+                                            Cambiar foto
+                                        </button>
+                                        ${CAN_DELETE_ADOPTION ? `<button
+                                            type="button"
                                             class="delete-adopcion inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold border border-red-200 bg-white text-red-700 hover:bg-red-50 transition ${canDelete ? '' : 'opacity-50 cursor-not-allowed'}"
-                                            data-id="${adopcion.id ?? ''}"
+                                            data-id="${adoptionId}"
                                             ${canDelete ? '' : 'disabled'}
                                         >
                                             Eliminar
-                                        </button>
-                                    </div>
+                                        </button>` : ''}
+                                    </div>` : ''}
                                 </div>
-                                <div class="grid grid-cols-2 gap-3 mb-3">
-                                    <div>
-                                        <span class="text-sm text-gray-700"><strong>Edad:</strong> ${adopcion.edad} año${adopcion.edad != 1 ? 's' : ''}</span>
+                                <div class="mb-3 flex items-start gap-4">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="grid grid-cols-2 gap-3 mb-3">
+                                            <div>
+                                                <span class="text-sm text-gray-700"><strong>Edad:</strong> ${adopcion.edad} año${adopcion.edad != 1 ? 's' : ''}</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-sm text-gray-700"><strong>Raza:</strong> ${adopcion.raza}</span>
+                                            </div>
+                                        </div>
+                                        ${adopcion.detalles ? `<div class="bg-white rounded-lg p-3 border">
+                                            <p class="text-sm text-gray-600"><strong class="text-gray-900">Detalles:</strong> ${adopcion.detalles}</p>
+                                        </div>` : ''}
                                     </div>
-                                    <div>
-                                        <span class="text-sm text-gray-700"><strong>Raza:</strong> ${adopcion.raza}</span>
-                                    </div>
+                                    ${adopcion.imageUrl ? `<div class="h-28 w-28 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-white sm:h-32 sm:w-32">
+                                        <img src="${adopcion.imageUrl}" alt="Foto de ${adopcion.nombreAnimal}" class="preview-image h-full w-full cursor-zoom-in object-cover" data-full-image="${adopcion.imageUrl}" data-image-alt="Foto de ${adopcion.nombreAnimal}">
+                                    </div>` : ''}
                                 </div>
-                                ${adopcion.detalles ? `<div class="bg-white rounded-lg p-3 mb-3 border">
-                                    <p class="text-sm text-gray-600"><strong class="text-gray-900">Detalles:</strong> ${adopcion.detalles}</p>
-                                </div>` : ''}
                                 <div class="flex items-center justify-between pt-3 border-t border-teal-200">
                                     <span class="text-xs text-gray-600">Registrado el ${fecha}</span>
                                 </div>
@@ -366,13 +331,108 @@
         // Recargar adopciones cada 3 segundos
         setInterval(loadAdopciones, 3000);
 
+        if (CLOSE_IMAGE_PREVIEW_MODAL) {
+            CLOSE_IMAGE_PREVIEW_MODAL.addEventListener('click', closeImagePreview);
+        }
+
+        if (IMAGE_PREVIEW_MODAL) {
+            IMAGE_PREVIEW_MODAL.addEventListener('click', function (event) {
+                if (event.target === IMAGE_PREVIEW_MODAL) {
+                    closeImagePreview();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeImagePreview();
+            }
+        });
+
         // Eliminar adopción registrada
         document.getElementById('adopcionList').addEventListener('click', async function (event) {
+            const previewImage = event.target.closest('.preview-image');
+            if (previewImage) {
+                openImagePreview(previewImage.dataset.fullImage || previewImage.src, previewImage.dataset.imageAlt || previewImage.alt || 'Vista previa');
+                return;
+            }
+
+            const imageBtn = event.target.closest('.change-image');
+            if (imageBtn && !imageBtn.disabled) {
+                if (!IS_AUTHENTICATED) {
+                    showAlert('Debes iniciar sesión para actualizar imágenes', 'error');
+                    return;
+                }
+
+                if (!CAN_MANAGE_ADOPTION_IMAGE) {
+                    showAlert('No tienes permisos para actualizar imágenes', 'error');
+                    return;
+                }
+
+                const adoptionId = imageBtn.dataset.id;
+                if (!adoptionId) {
+                    showAlert('No se pudo identificar la adopción', 'error');
+                    return;
+                }
+
+                const picker = document.createElement('input');
+                picker.type = 'file';
+                picker.accept = 'image/*';
+
+                picker.addEventListener('change', async () => {
+                    const file = picker.files?.[0];
+                    if (!file) {
+                        return;
+                    }
+
+                    const originalText = imageBtn.textContent;
+                    imageBtn.disabled = true;
+                    imageBtn.textContent = 'Subiendo...';
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('fotoMascota', file);
+
+                        const updateUrl = UPDATE_IMAGE_URL_TEMPLATE.replace('__ID__', encodeURIComponent(adoptionId));
+                        const response = await fetch(updateUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': CSRF_TOKEN || '',
+                            },
+                            body: formData,
+                        });
+
+                        const result = await response.json().catch(() => ({}));
+                        if (!response.ok || !result.success) {
+                            showAlert('Error: ' + (result.message || 'No se pudo actualizar la imagen'), 'error');
+                            return;
+                        }
+
+                        showAlert('Imagen actualizada correctamente', 'success');
+                        loadAdopciones();
+                    } catch (error) {
+                        showAlert('Error: ' + error.message, 'error');
+                    } finally {
+                        imageBtn.disabled = false;
+                        imageBtn.textContent = originalText;
+                    }
+                });
+
+                picker.click();
+                return;
+            }
+
             const btn = event.target.closest('.delete-adopcion');
             if (!btn || btn.disabled) return;
 
-            if (!IS_REFUGIO) {
-                showAlert('Solo usuarios con rol refugio pueden eliminar adopciones', 'error');
+            if (!IS_AUTHENTICATED) {
+                showAlert('Debes iniciar sesión para eliminar adopciones', 'error');
+                return;
+            }
+
+            if (!CAN_DELETE_ADOPTION) {
+                showAlert('No tienes permisos para eliminar adopciones', 'error');
                 return;
             }
 
@@ -391,10 +451,12 @@
             btn.textContent = 'Eliminando...';
 
             try {
-                const response = await fetch(`${API_URL}/${encodeURIComponent(adoptionId)}`, {
+                const deleteUrl = DELETE_URL_TEMPLATE.replace('__ID__', encodeURIComponent(adoptionId));
+                const response = await fetch(deleteUrl, {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',
+                        'X-CSRF-TOKEN': CSRF_TOKEN || '',
                     },
                 });
 
@@ -416,11 +478,17 @@
         });
 
         // Agregar evento para el formulario
-        document.getElementById('adopcionForm').addEventListener('submit', async function (event) {
-            event.preventDefault();
+        const adopcionForm = document.getElementById('adopcionForm');
+        if (adopcionForm) {
+            adopcionForm.addEventListener('submit', async function (event) {
+                if (!CAN_REGISTER_ADOPTION) {
+                    return;
+                }
 
-            if (!IS_REFUGIO) {
-                showAlert('Solo usuarios con rol refugio pueden publicar adopciones', 'error');
+                event.preventDefault();
+
+            if (!IS_AUTHENTICATED) {
+                showAlert('Debes iniciar sesión para registrar una adopción', 'error');
                 return;
             }
 
@@ -429,6 +497,7 @@
             const edad = document.getElementById('edad').value;
             const raza = document.getElementById('raza').value.trim();
             const detalles = document.getElementById('detalles').value.trim();
+            const fotoMascota = document.getElementById('fotoMascota').files[0];
 
             // Validaciones básicas
             if (!nombreAnimal || !raza || !edad || !tipoAnimal) {
@@ -447,19 +516,24 @@
             btn.textContent = 'Registrando...';
 
             try {
-                const response = await fetch(API_URL, {
+                const formData = new FormData();
+                formData.append('nombreAnimal', nombreAnimal);
+                formData.append('tipoAnimal', tipoAnimal);
+                formData.append('edad', edad);
+                formData.append('raza', raza);
+                formData.append('detalles', detalles || '');
+
+                if (fotoMascota) {
+                    formData.append('fotoMascota', fotoMascota);
+                }
+
+                const response = await fetch(STORE_URL, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'Accept': 'application/json',
+                        'X-CSRF-TOKEN': CSRF_TOKEN || '',
                     },
-                    body: JSON.stringify({
-                        nombreAnimal,
-                        tipoAnimal,
-                        edad: parseInt(edad),
-                        raza,
-                        detalles: detalles || '',
-                    })
+                    body: formData
                 });
 
                 const result = await response.json();
@@ -478,7 +552,7 @@
                 btn.disabled = false;
                 btn.textContent = 'Registrar Adopción';
             }
-        });
+            });
+        }
     </script>
-</body>
-</html>
+</x-app-layout>

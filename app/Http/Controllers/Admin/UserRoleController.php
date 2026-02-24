@@ -4,15 +4,23 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Firestore\FirestoreUserRoleService;
 use Illuminate\Http\Request;
-use Spatie\Permission\Models\Role;
 use Illuminate\Validation\Rule;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 
 
 
 class UserRoleController extends Controller
 {
+    protected $firestoreRoles;
+
+    public function __construct(FirestoreUserRoleService $firestoreRoles)
+    {
+        $this->firestoreRoles = $firestoreRoles;
+    }
+
     public function index(Request $request)
     {
         $q = trim((string) $request->query('q', ''));
@@ -20,10 +28,14 @@ class UserRoleController extends Controller
         $status = $request->query('status');   // pending|approved|rejected|all
         $trashed = $request->query('trashed'); // null|with|only
 
-        $users = User::query()
+        $query = User::query()
             // SoftDeletes: mostrar también desactivados si se pide
-            ->when($trashed === 'with', fn ($query) => $query->withTrashed())
-            ->when($trashed === 'only', fn ($query) => $query->onlyTrashed())
+            ->when($trashed === 'with', function ($query) {
+                $query->withTrashed();
+            })
+            ->when($trashed === 'only', function ($query) {
+                $query->onlyTrashed();
+            })
 
             // búsqueda por texto
             ->when($q !== '', function ($query) use ($q) {
@@ -33,22 +45,35 @@ class UserRoleController extends Controller
                 });
             })
 
-            // filtro por rol (Spatie)
-            ->when($role, function ($query) use ($role) {
-                $query->whereHas('roles', function ($r) use ($role) {
-                    $r->where('name', $role);
-                });
-            })
-
             // filtro por estado de solicitud (si lo manejas)
             ->when($status && $status !== 'all', function ($query) use ($status) {
                 $query->where('role_request_status', $status);
             })
 
-            ->with('roles')
-            ->orderBy('name')
-            ->paginate(15)
-            ->withQueryString();
+            ->orderBy('name');
+
+        $allUsers = $query->get();
+
+        if ($role) {
+            $allUsers = $allUsers->filter(function ($user) use ($role) {
+                return $user->hasRole($role);
+            })->values();
+        }
+
+        $perPage = 15;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $pageItems = $allUsers->forPage($currentPage, $perPage)->values();
+
+        $users = new LengthAwarePaginator(
+            $pageItems,
+            $allUsers->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
 
         return view('admin.users.index', compact('users', 'q', 'role', 'status', 'trashed'));
     }
@@ -57,8 +82,13 @@ class UserRoleController extends Controller
 
     public function edit(User $user)
     {
-        $roles = Role::query()->orderBy('name')->get();
-        $currentRole = $user->roles->first()?->name; // asumimos 1 rol principal
+        $roles = collect([
+            (object) ['name' => 'admin'],
+            (object) ['name' => 'veterinario'],
+            (object) ['name' => 'refugio'],
+            (object) ['name' => 'ciudadano'],
+        ]);
+        $currentRole = $user->getRoleNames()->first();
 
         return view('admin.users.edit-role', compact('user', 'roles', 'currentRole'));
     }
@@ -66,7 +96,7 @@ class UserRoleController extends Controller
     public function update(Request $request, User $user)
     {
         $data = $request->validate([
-            'role' => 'required|string|exists:roles,name',
+            'role' => 'required|string|in:admin,veterinario,refugio,ciudadano',
         ]);
 
         // Evitar que el admin se quite a sí mismo el rol admin (opcional pero recomendado)
@@ -76,6 +106,7 @@ class UserRoleController extends Controller
 
         // Para el proyecto, manejamos 1 rol principal: syncRoles reemplaza el/los rol(es)
         $user->syncRoles([$data['role']]);
+        $this->firestoreRoles->resolveRoleRequest($user, 'approved', $data['role']);
 
         return redirect()
             ->route('admin.users.index')
@@ -102,6 +133,7 @@ public function approve(User $user)
     $user->role_request_status = 'approved';
     $user->role_reviewed_at = now();
     $user->save();
+    $this->firestoreRoles->resolveRoleRequest($user, 'approved', $user->requested_role);
 
     return back()->with('success', 'Solicitud aprobada.');
 }
@@ -117,6 +149,7 @@ public function reject(User $user)
     $user->role_request_status = 'rejected';
     $user->role_reviewed_at = now();
     $user->save();
+    $this->firestoreRoles->resolveRoleRequest($user, 'rejected');
 
     return back()->with('success', 'Solicitud rechazada (se mantiene como ciudadano).');
 }

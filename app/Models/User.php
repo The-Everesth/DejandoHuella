@@ -7,8 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-
-use Spatie\Permission\Traits\HasRoles;
+use App\Services\Firestore\FirestoreUserRoleService;
 use App\Models\Pet;
 use App\Models\AdoptionPost;
 use App\Models\AdoptionRequest;
@@ -23,7 +22,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
-    use HasRoles;
     use SoftDeletes;
 
     public function pets()
@@ -96,6 +94,66 @@ class User extends Authenticatable
     public function supportTickets()
     {
         return $this->hasMany(\App\Models\SupportTicket::class);
+    }
+
+    public function hasRole($roles, $guard = null): bool
+    {
+        return app(FirestoreUserRoleService::class)->hasRoleByLaravelUserId((int) $this->id, $roles);
+    }
+
+    public function hasAnyRole(...$roles): bool
+    {
+        return $this->hasRole($roles);
+    }
+
+    public function getRoleNames()
+    {
+        return collect(app(FirestoreUserRoleService::class)->getRolesByLaravelUserId((int) $this->id));
+    }
+
+    public function assignRole(...$roles)
+    {
+        $role = $this->firstRoleFromInput($roles);
+        if ($role) {
+            app(FirestoreUserRoleService::class)->syncPrimaryRole($this, $role);
+        }
+        return $this;
+    }
+
+    public function syncRoles($roles)
+    {
+        $role = $this->firstRoleFromInput($roles);
+        if ($role) {
+            app(FirestoreUserRoleService::class)->syncPrimaryRole($this, $role);
+        }
+        return $this;
+    }
+
+    protected function firstRoleFromInput($roles): ?string
+    {
+        $flattened = [];
+
+        if (is_array($roles)) {
+            foreach ($roles as $role) {
+                if (is_array($role)) {
+                    foreach ($role as $nested) {
+                        $flattened[] = $nested;
+                    }
+                } else {
+                    $flattened[] = $role;
+                }
+            }
+        } else {
+            $flattened[] = $roles;
+        }
+
+        foreach ($flattened as $role) {
+            if (is_string($role) && trim($role) !== '') {
+                return strtolower(trim($role));
+            }
+        }
+
+        return null;
     }
 
 }
