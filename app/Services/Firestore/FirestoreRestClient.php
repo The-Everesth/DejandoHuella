@@ -16,8 +16,13 @@ class FirestoreRestClient
     public function __construct()
     {
         // Determine credentials path first (required to read project id when missing)
-        $path = config('firebase.credentials') ?: base_path(env('FIREBASE_CREDENTIALS'));
-        if (! file_exists($path)) {
+        $path = config('firebase.credentials');
+        if (! $path) {
+            $raw = env('FIREBASE_CREDENTIALS') ?: env('FIREBASE_CREDENTIALS_PATH');
+            $path = $raw ? base_path($raw) : null;
+        }
+
+        if (! $path || ! is_file($path) || ! is_readable($path)) {
             throw new \RuntimeException("No se encontró el archivo de credenciales de Firebase: $path");
         }
 
@@ -94,6 +99,12 @@ class FirestoreRestClient
         return "https://firestore.googleapis.com/v1/projects/{$this->projectId}/databases/(default)/documents";
     }
 
+    protected function encodePath(string $path): string
+    {
+        $segments = array_filter(explode('/', trim($path, '/')), fn ($segment) => $segment !== '');
+        return implode('/', array_map('rawurlencode', $segments));
+    }
+
     protected function headers(): array
     {
         return [
@@ -151,7 +162,7 @@ class FirestoreRestClient
 
     public function getDocument(string $documentPath): ?array
     {
-        $url = $this->baseUrl().'/'.rawurlencode($documentPath);
+        $url = $this->baseUrl().'/'.$this->encodePath($documentPath);
         try {
             $body = $this->request('GET', $url);
             return $body;
@@ -165,7 +176,7 @@ class FirestoreRestClient
 
     public function listDocuments(string $collectionPath, array $queryParams = []): array
     {
-        $url = $this->baseUrl().'/'.rawurlencode($collectionPath);
+        $url = $this->baseUrl().'/'.$this->encodePath($collectionPath);
         if (! empty($queryParams)) {
             $url .= '?'.http_build_query($queryParams);
         }
@@ -176,14 +187,14 @@ class FirestoreRestClient
 
     public function createDocument(string $collectionPath, string $documentId, array $data): array
     {
-        $url = $this->baseUrl().'/'.rawurlencode($collectionPath)."?documentId=".rawurlencode($documentId);
+        $url = $this->baseUrl().'/'.$this->encodePath($collectionPath)."?documentId=".rawurlencode($documentId);
         $body = ['fields' => $this->phpToFields($data)];
         return $this->request('POST', $url, ['json' => $body]);
     }
 
     public function patchDocument(string $documentPath, array $data, array $updateMaskFields = []): array
     {
-        $url = $this->baseUrl().'/'.rawurlencode($documentPath);
+        $url = $this->baseUrl().'/'.$this->encodePath($documentPath);
         $body = ['fields' => $this->phpToFields($data)];
         if (! empty($updateMaskFields)) {
             $body['updateMask'] = ['fieldPaths' => $updateMaskFields];
@@ -193,7 +204,7 @@ class FirestoreRestClient
 
     public function deleteDocument(string $documentPath): bool
     {
-        $url = $this->baseUrl().'/'.rawurlencode($documentPath);
+        $url = $this->baseUrl().'/'.$this->encodePath($documentPath);
         $this->request('DELETE', $url);
         return true; // success if no exception
     }
@@ -238,6 +249,7 @@ class FirestoreRestClient
     {
         $decoded = [];
         $fields = $document['fields'] ?? [];
+        $docId = basename($document['name'] ?? '');
         $decode = function ($value) use (&$decode) {
             if (array_key_exists('nullValue', $value)) {
                 return null;
@@ -278,9 +290,10 @@ class FirestoreRestClient
             $decoded[$k] = $decode($v);
         }
 
+        $decoded['_docId'] = $docId;
+
         if (!isset($decoded['id']) || empty($decoded['id'])) {
-            $name = $document['name'] ?? '';
-            $decoded['id'] = basename($name);
+            $decoded['id'] = $docId;
         }
 
         return $decoded;
@@ -299,7 +312,10 @@ class FirestoreRestClient
         $out = [];
         foreach ($docs as $d) {
             $decoded = $this->fromFirestoreDocument($d);
-            $out[$decoded['id']] = $decoded;
+            $docId = $decoded['_docId'] ?? ($decoded['id'] ?? null);
+            if ($docId) {
+                $out[$docId] = $decoded;
+            }
         }
         return $out;
     }
@@ -312,7 +328,7 @@ class FirestoreRestClient
             return $this->getDoc($collection, $id) ?? [];
         }
 
-        $url = $this->baseUrl().'/'.rawurlencode($collection);
+        $url = $this->baseUrl().'/'.$this->encodePath($collection);
         $body = ['fields' => $this->phpToFields($data)];
         $payload = $this->request('POST', $url, ['json' => $body]);
         return $this->fromFirestoreDocument($payload);
