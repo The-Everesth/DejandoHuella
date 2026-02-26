@@ -44,4 +44,16 @@ class ClinicsApiController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Devuelve los datos de una sola clínica desde Firestore.
+     */
+    public function show(string $id)
+    {
+        $clinic = $this->firebase->getClinicById($id);
+        if (! $clinic) {
+            return response()->json(['success' => false, 'message' => 'Clínica no encontrada'], 404);
+        }
+        return response()->json(['success' => true, 'data' => $clinic]);
+    }
 }

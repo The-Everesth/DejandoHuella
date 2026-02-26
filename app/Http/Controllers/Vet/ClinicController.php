@@ -61,7 +61,7 @@ class ClinicController extends Controller
             // Don't fail the request, MySQL write succeeded
         }
 
-        return redirect()->route('vet.clinics.index')->with('success', 'Clínica creada.');
+        return redirect()->route('vet.clinics.index')->with('success', 'Clínica creada correctamente.');
     }
 
 
@@ -126,7 +126,7 @@ class ClinicController extends Controller
             // Don't fail the request, MySQL write succeeded
         }
 
-        return redirect()->route('vet.clinics.index')->with('success', 'Clínica actualizada.');
+        return redirect()->route('vet.clinics.index')->with('success', 'Clínica actualizada correctamente.');
     }
 
     public function destroy(Clinic $clinic)
@@ -144,6 +144,6 @@ class ClinicController extends Controller
         
         // Then delete from MySQL
         $clinic->delete();
-        return back()->with('success', 'Clínica eliminada.');
+        return back()->with('success', 'Clínica eliminada correctamente.');
     }
 }

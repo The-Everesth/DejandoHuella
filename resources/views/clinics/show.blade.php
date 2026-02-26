@@ -66,24 +66,24 @@
                     <div>
                         <h2 class="text-2xl font-bold mb-4 text-gray-800">Servicios Disponibles</h2>
                         @if($clinic->services->isNotEmpty())
-                            <div class="space-y-3">
+                            <div class="space-y-3 max-h-96 overflow-y-auto">
                                 @foreach($clinic->services as $service)
                                     <div class="border border-teal-200 rounded-lg p-4 hover:bg-teal-50 transition">
                                         <h3 class="font-semibold text-teal-700">{{ $service->name }}</h3>
                                         <p class="text-sm text-gray-600 mt-1">{{ $service->description }}</p>
                                         <div class="mt-3 flex items-center justify-between">
-                                            @if($service->pivot->price)
+                                            @if(isset($service->pivot) && $service->pivot->price)
                                                 <span class="text-lg font-bold text-teal-600">
                                                     ${{ number_format($service->pivot->price, 2) }} {{ $service->pivot->currency ?? 'USD' }}
                                                 </span>
                                             @endif
-                                            @if($service->pivot->duration_minutes)
+                                            @if(isset($service->pivot) && $service->pivot->duration_minutes)
                                                 <span class="text-sm text-gray-500">
                                                     {{ $service->pivot->duration_minutes }} min
                                                 </span>
                                             @endif
                                         </div>
-                                        @if($service->pivot->is_available)
+                                        @if(isset($service->pivot) ? $service->pivot->is_available : false)
                                             <div class="flex gap-2 mt-3">
                                                 <span class="inline-block px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
                                                     Disponible

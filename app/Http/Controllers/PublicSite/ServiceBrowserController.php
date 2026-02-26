@@ -38,7 +38,12 @@ class ServiceBrowserController extends Controller
 
         $allClinics = $clinicsQuery->get()->filter(function ($clinic) {
             return $clinic->user && $clinic->user->hasRole('veterinario');
-        })->values();
+        })->values()
+          ->map(function($clinic) {
+              // añadir identificador de Firestore basado en convención de syncFromModel
+              $clinic->firestore_id = 'c_' . $clinic->id;
+              return $clinic;
+          });
 
         $perPage = 12;
         $currentPage = LengthAwarePaginator::resolveCurrentPage();

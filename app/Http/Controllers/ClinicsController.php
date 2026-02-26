@@ -24,13 +24,45 @@ class ClinicsController extends Controller
         return view('clinics.index');
     }
 
-    // Web: detalle view (using Eloquent clinic)
-    public function showView(string $id)
+    // Web: detalle view a partir de Firestore (document ID)
+    public function publicShow(string $docId)
     {
-        $clinic = \App\Models\Clinic::with(['user', 'services'])->find($id);
-        if (!$clinic || !$clinic->is_public) {
+        // cargar la clínica desde Firestore
+        $clinicData = $this->clinics->getClinicById($docId);
+        if (! $clinicData) {
             abort(404);
         }
+
+        // convertir arreglo a objeto para que la vista pueda acceder con ->
+        $clinic = (object) $clinicData;
+
+        // normalizar servicios: convertir a colección de objetos (minimo id/nombre)
+        $clinic->services = collect($clinicData['services'] ?? [])->map(function($svc) {
+            if (is_string($svc)) {
+                return (object)['id' => $svc, 'name' => $svc];
+            }
+            if (is_array($svc)) {
+                return (object) $svc;
+            }
+            return $svc;
+        });
+
+        // si no tenemos servicios en Firestore pero el ID corresponde
+        // a un registro MySQL, intentar traerlos desde la base de datos
+        if ($clinic->services->isEmpty() && str_starts_with($docId, 'c_')) {
+            $mysqlId = intval(substr($docId, 2));
+            $elo = \App\Models\Clinic::with(['services', 'user'])->find($mysqlId);
+            if ($elo) {
+                $clinic->services = $elo->services;
+                // conservar usuario Firestore en caso de ausencia
+                $clinic->user = $elo->user ?: $clinic->user;
+            }
+        }
+
+        // intentar enlazar usuario si el documento incluye algún ID mysql
+        $userId = $clinicData['mysqlUserId'] ?? $clinicData['ownerUserId'] ?? null;
+        $clinic->user = $clinic->user ?? ($userId ? \App\Models\User::find($userId) : null);
+
         return view('clinics.show', ['clinic' => $clinic]);
     }
 
@@ -61,7 +93,7 @@ class ClinicsController extends Controller
         return response()->json(['success' => true, 'data' => array_values($list)]);
     }
 
-    // API: show
+    // API: show (se mantiene para posibles llamadas internas, aunque ahora queda en el controlador web)
     public function show(string $id)
     {
         $clinic = $this->clinics->getClinicById($id);

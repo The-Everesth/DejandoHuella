@@ -71,7 +71,7 @@ class ClinicServiceController extends Controller
 
         $clinic->services()->sync($sync);
 
-        return back()->with('success', 'Servicios y precios actualizados.');
+        return back()->with('success', 'Servicios de la clínica actualizados correctamente.');
     }
 
 }

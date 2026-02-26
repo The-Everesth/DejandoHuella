@@ -16,6 +16,8 @@ use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\Admin\MedicalServiceController;
 use App\Http\Controllers\Admin\SupportTicketAdminController;
 
+use App\Http\Controllers\ClinicsController;
+
 // Ruta para el formulario de adopciones
 Route::view('/adopciones-form', 'adopciones')->name('adopciones.form');
 Route::post('/adopciones-form', [AdoptionsController::class, 'store'])->middleware('auth')->name('adopciones.store');
@@ -73,6 +75,10 @@ Route::redirect('/adoptions/{any}', '/adopciones-form', 301)->where('any', '.*')
 // SERVICIOS PÚBLICOS (explorar)
 Route::get('/services', [ServiceBrowserController::class, 'index'])->name('services.index');
 Route::get('/services/{service}/clinics', [ServiceBrowserController::class, 'clinics'])->name('services.clinics');
+
+// muestra la página pública de una clínica usando Firestore
+Route::get('/clinics/{clinic}', [ClinicsController::class, 'publicShow'])
+    ->name('clinics.show');
 
 // AUTH + VERIFIED (todo lo interno)
 Route::middleware(['auth', 'verified'])->group(function () {

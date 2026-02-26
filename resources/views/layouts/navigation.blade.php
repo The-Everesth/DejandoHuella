@@ -23,7 +23,7 @@
                 <a href="{{ url('/') }}" class="hover:text-white/80 transition">Inicio</a>
 
                 {{-- Ajusta estas rutas a las tuyas reales --}}
-                <a href="{{ route('adopciones.form') }}" class="hover:text-white/80 transition">Adopción</a>
+                <a href="{{ route('adopciones.form') }}" class="hover:text-white/80 transition">Adopciones</a>
 
 
                 <a href="{{ route('services.index') }}" class="hover:text-white/80 transition">Servicios Medicos</a>
