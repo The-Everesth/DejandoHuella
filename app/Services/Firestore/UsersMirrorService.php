@@ -6,7 +6,7 @@ use App\Models\User;
 
 class UsersMirrorService
 {
-    protected $client;
+    protected FirestoreRestClient $client;
 
     public function __construct(FirestoreRestClient $client)
     {
@@ -18,12 +18,12 @@ class UsersMirrorService
         $docId = 'u_'.$user->id;
         $docPath = "users/{$docId}";
         $data = [
-            'laravelUserId' => $user->id,
+            'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
-            'role' => $user->getRoleNames()->first() ?: 'ciudadano',
-            'status' => $user->deleted_at ? 'inactive' : 'active',
-            'updatedAt' => now()->toIso8601String(),
+            'roles' => $user->roles->pluck('name')->all(),
+            'created_at' => optional($user->created_at)->toDateTimeString(),
+            'updated_at' => optional($user->updated_at)->toDateTimeString(),
         ];
 
         $exists = $this->client->getDocument($docPath);
