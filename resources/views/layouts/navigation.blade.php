@@ -23,7 +23,7 @@
                 <a href="{{ url('/') }}" class="hover:text-white/80 transition">Inicio</a>
 
                 {{-- Ajusta estas rutas a las tuyas reales --}}
-                <a href="{{ route('adoptions.index') }}" class="hover:text-white/80 transition">Adopción</a>
+                <a href="{{ route('adopciones.form') }}" class="hover:text-white/80 transition">Adopciones</a>
 
 
                 <a href="{{ route('services.index') }}" class="hover:text-white/80 transition">Servicios Medicos</a>
@@ -66,6 +66,15 @@
                                 <x-dropdown-link :href="route('vet.clinics.index')">Mis Clínicas</x-dropdown-link>
                                 <x-dropdown-link :href="route('vet.appointments.index')">Citas</x-dropdown-link>
                             @endrole
+                            
+                            @role('ciudadano')
+                                <x-dropdown-link :href="route('my.pets')">
+                                    Mis mascotas
+                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('my.appointments')">
+                                    Mis citas
+                                </x-dropdown-link>
+                            @endrole
 
                             <x-dropdown-link :href="route('tickets.index')">Mensajes</x-dropdown-link>
 
@@ -103,7 +112,7 @@
     <div :class="{'block': open, 'hidden': ! open}" class="hidden md:hidden border-t border-white/10">
         <div class="px-4 py-3 space-y-2 font-semibold">
             <a class="block py-2" href="{{ url('/') }}">Inicio</a>
-            <a class="block py-2" href="{{ route('adoptions.index') }}">Adopción</a>
+            <a class="block py-2" href="{{ route('adopciones.form') }}">Adopción</a>
             <a class="block py-2" href="{{ route('services.index') }}">Servicios Medicos</a>
 
             <div class="border-t border-white/10 my-2"></div>

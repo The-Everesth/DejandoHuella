@@ -12,9 +12,17 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
+use App\Services\Firestore\FirestoreUserRoleService;
 
 class RegisteredUserController extends Controller
 {
+    protected $firestoreRoles;
+
+    public function __construct(FirestoreUserRoleService $firestoreRoles)
+    {
+        $this->firestoreRoles = $firestoreRoles;
+    }
+
     /**
      * Display the registration view.
      */
@@ -45,12 +53,16 @@ class RegisteredUserController extends Controller
         $selectedRole = $request->input('role');
         $user->assignRole('ciudadano'); // rol por defecto
 
-        // Si pidió vet/refugio, queda pendiente (NO se asigna todavía)
+        // Si pidió veterinario/refugio, se autoaprueba
         if (in_array($selectedRole, ['veterinario', 'refugio'], true)) {
-            $user->requested_role = $selectedRole;
-            $user->role_request_status = 'pending';
+            $user->syncRoles([$selectedRole]);
+            $user->requested_role = null;
+            $user->role_request_status = 'approved';
             $user->role_requested_at = now();
+            $user->role_reviewed_at = now();
             $user->save();
+
+            $this->firestoreRoles->resolveRoleRequest($user, 'approved', $selectedRole);
         }
 
         event(new Registered($user));

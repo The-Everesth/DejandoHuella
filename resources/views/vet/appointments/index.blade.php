@@ -4,30 +4,36 @@
 <div class="space-y-3">
 @forelse($appointments as $a)
   <div class="p-4 border rounded">
-    <div class="font-semibold">{{ $a->service->name }} — {{ $a->pet->name }}</div>
+    <div class="font-semibold">Servicio: {{ $a->serviceId ?? '-' }} — Mascota: {{ $a->petId ?? '-' }}</div>
     <div class="text-sm text-gray-600">
-      Clínica: {{ $a->clinic->name }} | {{ $a->scheduled_at->format('Y-m-d H:i') }}
+      Clínica: {{ $a->clinicId ?? '-' }} | {{ $a->startAt ?? '-' }}
     </div>
-    <div class="text-sm">Cliente: {{ $a->owner->name }} ({{ $a->owner->email }})</div>
+    <div class="text-sm">Cliente: {{ $a->userUid ?? '-' }} | Contacto: {{ $a->contact ?? '-' }}</div>
     <div>Estado: <b>{{ $a->status }}</b></div>
+    @if(!empty($a->notes))
+      <div class="text-xs text-gray-500">Notas usuario: {{ $a->notes }}</div>
+    @endif
+    @if(!empty($a->vetNotes))
+      <div class="text-xs text-green-700">Notas vet: {{ $a->vetNotes }}</div>
+    @endif
 
-    <div class="mt-3 flex gap-3">
-      <form method="POST" action="{{ route('vet.appointments.status', $a) }}">
+    @if($a->status === 'PENDING')
+    <div class="mt-3">
+      <form method="POST" action="{{ route('vet.appointments.status', $a->id) }}" class="flex flex-col gap-2">
         @csrf @method('PATCH')
-        <input type="hidden" name="status" value="confirmada">
-        <button class="underline">Confirmar</button>
+        <input type="hidden" name="status" value="CONFIRMED">
+        <label>Notas para el usuario (opcional):
+          <textarea name="vetNotes" class="border rounded p-2 w-full" rows="2"></textarea>
+        </label>
+        <button class="border rounded px-3 py-1 bg-green-600 text-white">Confirmar</button>
       </form>
-      <form method="POST" action="{{ route('vet.appointments.status', $a) }}">
+      <form method="POST" action="{{ route('vet.appointments.status', $a->id) }}" class="mt-2">
         @csrf @method('PATCH')
-        <input type="hidden" name="status" value="atendida">
-        <button class="underline">Atendida</button>
-      </form>
-      <form method="POST" action="{{ route('vet.appointments.status', $a) }}">
-        @csrf @method('PATCH')
-        <input type="hidden" name="status" value="cancelada">
-        <button class="underline">Cancelar</button>
+        <input type="hidden" name="status" value="REJECTED">
+        <button class="border rounded px-3 py-1 bg-red-600 text-white">Rechazar</button>
       </form>
     </div>
+    @endif
   </div>
 @empty
   <p>No hay citas.</p>

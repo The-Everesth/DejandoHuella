@@ -1,0 +1,11 @@
+{
+  "rules": {
+    "adopciones": {
+      ".read": true,
+      ".write": true,
+      "$uid": {
+        ".validate": "newData.hasChildren(['nombreAnimal', 'tipoAnimal', 'edad', 'raza'])"
+      }
+    }
+  }
+}
