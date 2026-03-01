@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services\Firestore;
 
 use Illuminate\Support\Facades\Log;
@@ -186,6 +185,18 @@ class ClinicsFirestoreService
             // Don't throw, allow MySQL write to succeed
             return $data;
         }
+    }
+
+    /**
+     * Update the serviceIds array for a clinic document.
+     */
+    public function updateClinicServices(string $clinicId, array $serviceIds): bool
+    {
+        $result = $this->client->patchDoc($this->collection, $clinicId, [
+            'serviceIds' => $serviceIds,
+            'updatedAt' => now()->toIso8601String(),
+        ]);
+        return (bool)$result;
     }
 
     /**

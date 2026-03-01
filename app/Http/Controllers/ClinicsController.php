@@ -36,26 +36,22 @@ class ClinicsController extends Controller
         // convertir arreglo a objeto para que la vista pueda acceder con ->
         $clinic = (object) $clinicData;
 
-        // normalizar servicios: convertir a colección de objetos (minimo id/nombre)
-        $clinic->services = collect($clinicData['services'] ?? [])->map(function($svc) {
-            if (is_string($svc)) {
-                return (object)['id' => $svc, 'name' => $svc];
-            }
-            if (is_array($svc)) {
-                return (object) $svc;
-            }
-            return $svc;
-        });
+        // Cargar catálogo global de servicios médicos Firestore
+        $allServices = $this->services->listActiveServices();
 
-        // si no tenemos servicios en Firestore pero el ID corresponde
-        // a un registro MySQL, intentar traerlos desde la base de datos
-        if ($clinic->services->isEmpty() && str_starts_with($docId, 'c_')) {
-            $mysqlId = intval(substr($docId, 2));
-            $elo = \App\Models\Clinic::with(['services', 'user'])->find($mysqlId);
-            if ($elo) {
-                $clinic->services = $elo->services;
-                // conservar usuario Firestore en caso de ausencia
-                $clinic->user = $elo->user ?: $clinic->user;
+        // Si la clínica tiene serviceIds (Firestore), úsalo para mostrar servicios
+        if (isset($clinicData['serviceIds']) && is_array($clinicData['serviceIds']) && count($clinicData['serviceIds']) > 0) {
+            $clinic->serviceIds = $clinicData['serviceIds'];
+        } else {
+            // Legacy: intentar mapear servicios MySQL si existen
+            $clinic->serviceIds = [];
+            if (str_starts_with($docId, 'c_')) {
+                $mysqlId = intval(substr($docId, 2));
+                $elo = \App\Models\Clinic::with(['services', 'user'])->find($mysqlId);
+                if ($elo) {
+                    $clinic->serviceIds = $elo->services->pluck('id')->all();
+                    $clinic->user = $elo->user ?: ($clinic->user ?? null);
+                }
             }
         }
 
@@ -63,7 +59,10 @@ class ClinicsController extends Controller
         $userId = $clinicData['mysqlUserId'] ?? $clinicData['ownerUserId'] ?? null;
         $clinic->user = $clinic->user ?? ($userId ? \App\Models\User::find($userId) : null);
 
-        return view('clinics.show', ['clinic' => $clinic]);
+        return view('clinics.show', [
+            'clinic' => $clinic,
+            'allServices' => $allServices,
+        ]);
     }
 
     // Vet panel view

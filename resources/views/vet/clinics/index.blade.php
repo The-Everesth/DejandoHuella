@@ -16,7 +16,7 @@
                             </p>
                         @endif
                         @if($c->phone)
-                            <p class="text-gray-600 text-sm mt-1">📞 {{ $c->phone }}</p>
+                            <p class="text-gray-600 text-sm mt-1">Tel: {{ $c->phone }}</p>
                         @endif
                         <p class="text-sm mt-2">
                             @if($c->is_public)
@@ -28,7 +28,7 @@
                     </div>
                     <div class="mt-4 flex flex-wrap gap-2">
                         <a href="{{ route('vet.clinics.edit', $c) }}" class="flex-1 bg-teal-500 text-white text-center px-3 py-2 rounded hover:bg-teal-600 transition">Ver / Editar</a>
-                        <a href="{{ route('vet.clinics.services.edit', $c) }}" class="flex-1 bg-blue-500 text-white text-center px-3 py-2 rounded hover:bg-blue-600 transition">Servicios</a>
+                        <a href="{{ route('vet.clinics.services.edit', ['clinic' => 'c_' . $c->id]) }}" class="flex-1 bg-blue-500 text-white text-center px-3 py-2 rounded hover:bg-blue-600 transition">Servicios</a>
                         <form method="POST" action="{{ route('vet.clinics.destroy', $c) }}" onsubmit="return confirm('¿Seguro que deseas eliminar esta clínica?');" class="flex-1">
                             @csrf @method('DELETE')
                             <button type="submit" class="w-full bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700 transition">

@@ -3,73 +3,54 @@
 namespace App\Http\Controllers\Vet;
 
 use App\Http\Controllers\Controller;
-use App\Models\Clinic;
-use App\Models\MedicalService;
+use App\Services\Firestore\ClinicsFirestoreService;
+use App\Services\Firestore\MedicalServicesFirestoreService;
 use Illuminate\Http\Request;
 
 class ClinicServiceController extends Controller
 {
-    public function edit(Clinic $clinic)
+    public function edit($clinicId, ClinicsFirestoreService $clinicsFirestore, MedicalServicesFirestoreService $servicesFirestore)
     {
-        // Seguridad: que el vet solo edite SU clínica
-        abort_unless($clinic->user_id === auth()->id(), 403);
-
-        $services = MedicalService::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
-
-        $selected = $clinic->services()->pluck('medical_services.id')->toArray();
-
-        return view('vet.clinics.services.edit', compact('clinic', 'services', 'selected'));
-    }
-
-    public function update(Request $request, Clinic $clinic)
-    {
-        abort_unless($clinic->user_id === auth()->id(), 403);
-
-        $data = $request->validate([
-            'services' => ['array'],
-            'services.*.enabled' => ['nullable', 'in:on,1,true'],
-            'services.*.price' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
-            'services.*.duration_minutes' => ['nullable', 'integer', 'min:5', 'max:600'],
-            'custom_service' => ['nullable','string','max:80'],
-            'custom_price' => ['nullable','numeric','min:0','max:999999.99'],
-            'custom_duration_minutes' => ['nullable','integer','min:5','max:600'],
+        \Log::info('[SERVICIOS] entro edit', [
+            'user_id' => auth()->id(),
+            'user_roles' => method_exists(auth()->user(), 'getRoleNames') ? auth()->user()->getRoleNames() : null,
+            'clinic_param' => $clinicId
         ]);
 
-        $sync = [];
+        // resto del código...
+        $clinic = $clinicsFirestore->getClinicById($clinicId);
+        $ownerId = auth()->id();
+        $isOwner = ($clinic['userId'] ?? null) == $ownerId || ($clinic['ownerUserId'] ?? null) == $ownerId;
+        abort_unless($clinic && $isOwner, 403);
 
-        // servicios existentes
-        foreach (($data['services'] ?? []) as $serviceId => $row) {
-            $enabled = isset($row['enabled']);
-            if (!$enabled) continue;
+        $services = array_values($servicesFirestore->listActiveServices());
+        $selectedServiceIds = $clinic['serviceIds'] ?? [];
 
-            $sync[$serviceId] = [
-                'price' => $row['price'] ?? null,
-                'currency' => 'MXN',
-                'duration_minutes' => $row['duration_minutes'] ?? null,
-                'is_available' => true,
-            ];
-        }
+        return view('vet.clinics.services.edit', [
+            'clinic' => (object)$clinic,
+            'clinicId' => $clinicId,
+            'services' => $services,
+            'selectedServiceIds' => $selectedServiceIds,
+        ]);
+    }
 
-        // servicio custom
-        $custom = trim((string)($data['custom_service'] ?? ''));
-        if ($custom !== '') {
-            $service = MedicalService::firstOrCreate(
-                ['name' => $custom],
-                ['type' => 'custom', 'created_by' => auth()->id(), 'is_active' => true]
-            );
+    public function update(Request $request, $clinicId, ClinicsFirestoreService $clinicsFirestore, MedicalServicesFirestoreService $servicesFirestore)
+    {
+        $clinic = $clinicsFirestore->getClinicById($clinicId);
+        $ownerId = auth()->id();
+        $isOwner = ($clinic['userId'] ?? null) == $ownerId || ($clinic['ownerUserId'] ?? null) == $ownerId;
+        abort_unless($clinic && $isOwner, 403);
 
-            $sync[$service->id] = [
-                'price' => $data['custom_price'] ?? null,
-                'currency' => 'MXN',
-                'duration_minutes' => $data['custom_duration_minutes'] ?? null,
-                'is_available' => true,
-            ];
-        }
+        $data = $request->validate([
+            'service_ids' => ['array'],
+            'service_ids.*' => ['string'],
+        ]);
 
-        $clinic->services()->sync($sync);
+        $allServices = $servicesFirestore->listActiveServices();
+        $validIds = array_keys($allServices);
+        $selected = array_values(array_filter($data['service_ids'] ?? [], fn($id) => in_array($id, $validIds, true)));
+
+        $clinicsFirestore->updateClinicServices($clinicId, $selected);
 
         return back()->with('success', 'Servicios de la clínica actualizados correctamente.');
     }

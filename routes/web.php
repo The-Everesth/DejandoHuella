@@ -93,7 +93,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Mascotas (dueños)
-    Route::resource('pets', PetController::class);
+    // Route::resource('pets', PetController::class); // Eliminado para evitar conflicto con rutas my/pets
 
     // Adopciones legacy (antes MySQL) -> redirigir al flujo Firebase
     Route::redirect('/my/adoptions', '/adopciones-form', 302)->name('myadoptions.index');
@@ -172,6 +172,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('/users/{user}', [UserRoleController::class, 'destroy'])->name('users.destroy');
 
         });
+    
+});
+// Rutas de mascotas (ciudadanos)
+Route::middleware(['role:ciudadano'])->group(function () {
+    Route::get('my/pets', [PetController::class, 'index'])->name('my.pets');
+    Route::get('my/pets/create', [PetController::class, 'create'])->name('my.pets.create');
+    Route::post('my/pets', [PetController::class, 'store'])->name('my.pets.store');
+    Route::get('my/pets/{pet}/edit', [PetController::class, 'edit'])->name('my.pets.edit');
+    Route::patch('my/pets/{pet}', [PetController::class, 'update'])->name('my.pets.update');
+    Route::delete('my/pets/{pet}', [PetController::class, 'destroy'])->name('my.pets.destroy');
 });
 
 require __DIR__.'/auth.php';

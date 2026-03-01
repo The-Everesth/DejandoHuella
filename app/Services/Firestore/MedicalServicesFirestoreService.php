@@ -15,9 +15,54 @@ class MedicalServicesFirestoreService
     public function listActiveServices(): array
     {
         $all = $this->client->listDocs($this->collection);
+        if (count($all) === 0) {
+            $this->seedIfEmpty([
+                [
+                    'id' => 'srv_consulta',
+                    'name' => 'Consulta general',
+                    'durationMinutes' => 30,
+                    'is_active' => true,
+                    'createdAt' => now()->toIso8601String(),
+                    'updatedAt' => now()->toIso8601String(),
+                ],
+                [
+                    'id' => 'srv_vacuna',
+                    'name' => 'Vacunación',
+                    'durationMinutes' => 20,
+                    'is_active' => true,
+                    'createdAt' => now()->toIso8601String(),
+                    'updatedAt' => now()->toIso8601String(),
+                ],
+                [
+                    'id' => 'srv_desparasitacion',
+                    'name' => 'Desparasitación',
+                    'durationMinutes' => 20,
+                    'is_active' => true,
+                    'createdAt' => now()->toIso8601String(),
+                    'updatedAt' => now()->toIso8601String(),
+                ],
+                [
+                    'id' => 'srv_urgencia',
+                    'name' => 'Urgencia',
+                    'durationMinutes' => 45,
+                    'is_active' => true,
+                    'createdAt' => now()->toIso8601String(),
+                    'updatedAt' => now()->toIso8601String(),
+                ],
+                [
+                    'id' => 'srv_esterilizacion',
+                    'name' => 'Esterilización',
+                    'durationMinutes' => 60,
+                    'is_active' => true,
+                    'createdAt' => now()->toIso8601String(),
+                    'updatedAt' => now()->toIso8601String(),
+                ],
+            ]);
+            $all = $this->client->listDocs($this->collection);
+        }
         $out = [];
         foreach ($all as $s) {
-            if (! isset($s['active']) || $s['active'] === true) {
+            if (! isset($s['is_active']) || $s['is_active'] === true) {
                 $out[$s['id']] = $s;
             }
         }
@@ -30,12 +75,11 @@ class MedicalServicesFirestoreService
     public function seedIfEmpty(array $defaults = []): int
     {
         $all = $this->client->listDocs($this->collection);
-        if (count($all) > 0) {
-            return 0;
-        }
+        $existingIds = array_map(fn($s) => $s['id'] ?? null, $all);
         $created = 0;
         foreach ($defaults as $d) {
             $id = $d['id'] ?? null;
+            if (!$id || in_array($id, $existingIds, true)) continue;
             $this->client->createDoc($this->collection, $id, $d);
             $created++;
         }

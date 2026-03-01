@@ -65,39 +65,52 @@
                     <!-- Services -->
                     <div>
                         <h2 class="text-2xl font-bold mb-4 text-gray-800">Servicios Disponibles</h2>
-                        @if($clinic->services->isNotEmpty())
+                        @php
+                            // $clinic->serviceIds: array of Firestore service IDs
+                            // $allServices: array of all Firestore services, indexed by id
+                            $hasServices = isset($clinic->serviceIds) && is_array($clinic->serviceIds) && count($clinic->serviceIds) > 0;
+                        @endphp
+                        @if($hasServices)
                             <div class="space-y-3 max-h-96 overflow-y-auto">
-                                @foreach($clinic->services as $service)
-                                    <div class="border border-teal-200 rounded-lg p-4 hover:bg-teal-50 transition">
-                                        <h3 class="font-semibold text-teal-700">{{ $service->name }}</h3>
-                                        <p class="text-sm text-gray-600 mt-1">{{ $service->description }}</p>
-                                        <div class="mt-3 flex items-center justify-between">
-                                            @if(isset($service->pivot) && $service->pivot->price)
-                                                <span class="text-lg font-bold text-teal-600">
-                                                    ${{ number_format($service->pivot->price, 2) }} {{ $service->pivot->currency ?? 'USD' }}
-                                                </span>
-                                            @endif
-                                            @if(isset($service->pivot) && $service->pivot->duration_minutes)
-                                                <span class="text-sm text-gray-500">
-                                                    {{ $service->pivot->duration_minutes }} min
+                                @foreach($clinic->serviceIds as $serviceId)
+                                    @php $service = $allServices[$serviceId] ?? null; @endphp
+                                    @if($service)
+                                        <div class="border border-teal-200 rounded-lg p-4 hover:bg-teal-50 transition">
+                                            <h3 class="font-semibold text-teal-700">{{ $service['name'] }}</h3>
+                                            <p class="text-sm text-gray-600 mt-1">{{ $service['description'] ?? '' }}</p>
+                                            <div class="mt-3 flex items-center justify-between">
+                                                @if(isset($service['price']))
+                                                    <span class="text-lg font-bold text-teal-600">
+                                                        ${{ number_format($service['price'], 2) }} {{ $service['currency'] ?? 'USD' }}
+                                                    </span>
+                                                @endif
+                                                @if(isset($service['durationMinutes']))
+                                                    <span class="text-sm text-gray-500">
+                                                        {{ $service['durationMinutes'] }} min
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            @if(!isset($service['is_active']) || $service['is_active'])
+                                                <div class="flex gap-2 mt-3">
+                                                    <span class="inline-block px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                                                        Disponible
+                                                    </span>
+                                                    <a href="{{ route('appointments.create', [
+                                                        'clinic' => $clinic->id,
+                                                        'service' => $service['id']
+                                                    ]) }}">
+                                                        <button class="ml-auto bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition text-sm font-medium">
+                                                            Solicitar cita
+                                                        </button>
+                                                    </a>
+                                                </div>
+                                            @else
+                                                <span class="inline-block mt-2 px-3 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full">
+                                                    No disponible
                                                 </span>
                                             @endif
                                         </div>
-                                        @if(isset($service->pivot) ? $service->pivot->is_available : false)
-                                            <div class="flex gap-2 mt-3">
-                                                <span class="inline-block px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                                                    Disponible
-                                                </span>
-                                                <a href="{{ route('appointments.create', [$clinic->id, $service->id]) }}" class="ml-auto px-3 py-1 bg-teal-600 text-white text-xs font-semibold rounded hover:bg-teal-700 transition">
-                                                    Agendar
-                                                </a>
-                                            </div>
-                                        @else
-                                            <span class="inline-block mt-2 px-3 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full">
-                                                No disponible
-                                            </span>
-                                        @endif
-                                    </div>
+                                    @endif
                                 @endforeach
                             </div>
                         @else

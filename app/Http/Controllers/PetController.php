@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Services\Firestore\PetsFirestoreService;
+use Illuminate\Support\Facades\Log;
 
 use App\Models\Pet;
 use App\Models\User;
@@ -10,14 +12,19 @@ class PetController extends Controller
 {
     public function index()
     {
-        /** @var User $user */
-        $user = auth()->user();
-
-        $pets = $user->hasRole('admin')
-            ? Pet::query()->latest()->get()
-            : $user->pets()->latest()->get();
-
+        $ownerUid = $this->getOwnerUid();
+        Log::info('[PETS] ownerUid index', ['ownerUid' => $ownerUid]);
+        $svc = app(PetsFirestoreService::class);
+        $pets = $svc->listByOwner($ownerUid);
         return view('pets.index', compact('pets'));
+    }
+    /**
+     * Retorna el UID del usuario autenticado (Firestore UID o fallback a id numérico)
+     */
+    private function getOwnerUid(): string
+    {
+        $user = auth()->user();
+        return $user->uid ?? (string)$user->id;
     }
 
     public function create()
@@ -27,70 +34,76 @@ class PetController extends Controller
 
     public function store(Request $request)
     {
-        /** @var User $user */
-        $user = auth()->user();
-
         $data = $request->validate([
-            'name' => 'required|string|max:60',
+            'name' => 'required|string|max:100',
             'species' => 'required|string|max:30',
-            'breed' => 'nullable|string|max:60',
-            'sex' => 'required|string|max:20',
-            'birth_date' => 'nullable|date',
-            'color' => 'nullable|string|max:40',
-            'description' => 'nullable|string|max:500',
-            'photo' => 'nullable|image|max:2048',
-            'is_sterilized' => 'sometimes|boolean',
-            'is_vaccinated' => 'sometimes|boolean',
+            'sex' => 'required|string|max:10',
+            'breed' => 'nullable|string|max:50',
+            'ageYears' => 'nullable|integer|min:0|max:50',
+            'notes' => 'nullable|string|max:255',
         ]);
 
-        // checkboxes: si no vienen, se consideran false
-        $data['is_sterilized'] = (bool) $request->boolean('is_sterilized');
-        $data['is_vaccinated'] = (bool) $request->boolean('is_vaccinated');
+        $data['ownerUid'] = $this->getOwnerUid();
+        Log::info('[PETS] ownerUid store', ['ownerUid' => $data['ownerUid']]);
+        $data['isActive'] = true;
+        $data['createdAt'] = now()->toIso8601String();
+        $data['updatedAt'] = now()->toIso8601String();
 
-        if ($request->hasFile('photo')) {
-            $data['photo_path'] = $request->file('photo')->store('pets', 'public');
+        Log::info('[PETS] create payload', $data);
+        try {
+            $svc = app(PetsFirestoreService::class);
+            $pet = $svc->createPet($data);
+            Log::info('[PETS] created', ['id' => $pet['id'] ?? null]);
+            return redirect()->route('my.pets')->with('success', 'Mascota registrada.');
+        } catch (\Throwable $e) {
+            Log::error('[PETS] error', ['msg' => $e->getMessage()]);
+            return back()->withInput()->with('error', 'No se pudo guardar la mascota: ' . $e->getMessage());
         }
-
-        $user->pets()->create($data);
-
-        return redirect()->route('pets.index')->with('success', 'Mascota registrada.');
     }
 
-    public function edit(Pet $pet)
+
+    public function edit($petId)
     {
-        $this->authorize('update', $pet);
-        return view('pets.edit', compact('pet'));
+        $svc = app(PetsFirestoreService::class);
+        $ownerUid = $this->getOwnerUid();
+        $pet = $svc->getById($petId);
+        if (!$pet || ($pet['ownerUid'] ?? null) !== $ownerUid || empty($pet['isActive'])) {
+            abort(404);
+        }
+        return view('pets.edit', ['pet' => (object)$pet]);
     }
 
-    public function update(Request $request, Pet $pet)
-    {
-        $this->authorize('update', $pet);
 
+    public function update(Request $request, string $pet)
+    {
+        $svc = app(PetsFirestoreService::class);
+        $ownerUid = $this->getOwnerUid();
+        $petData = $svc->getById($pet);
+        if (!$petData || ($petData['ownerUid'] ?? null) !== $ownerUid || empty($petData['isActive'])) {
+            abort(404);
+        }
         $data = $request->validate([
-            'name' => 'required|string|max:60',
+            'name' => 'required|string|max:100',
             'species' => 'required|string|max:30',
-            'breed' => 'nullable|string|max:60',
-            'sex' => 'required|string|max:20',
-            'birth_date' => 'nullable|date',
-            'color' => 'nullable|string|max:40',
-            'description' => 'nullable|string|max:500',
-            'is_sterilized' => 'sometimes|boolean',
-            'is_vaccinated' => 'sometimes|boolean',
+            'sex' => 'required|string|max:10',
+            'breed' => 'nullable|string|max:50',
+            'ageYears' => 'nullable|integer|min:0|max:50',
+            'notes' => 'nullable|string|max:255',
         ]);
-
-        $data['is_sterilized'] = (bool) $request->boolean('is_sterilized');
-        $data['is_vaccinated'] = (bool) $request->boolean('is_vaccinated');
-
-        $pet->update($data);
-
-        return redirect()->route('pets.index')->with('success', 'Mascota actualizada.');
+        $svc->updatePet($pet, $data);
+        return redirect()->route('my.pets')->with('success', 'Mascota actualizada correctamente.');
     }
 
-    public function destroy(Pet $pet)
-    {
-        $this->authorize('delete', $pet);
-        $pet->delete();
 
-        return redirect()->route('pets.index')->with('success', 'Mascota eliminada.');
+    public function destroy($petId)
+    {
+        $svc = app(PetsFirestoreService::class);
+        $ownerUid = $this->getOwnerUid();
+        $pet = $svc->getById($petId);
+        if (!$pet || ($pet['ownerUid'] ?? null) !== $ownerUid || empty($pet['isActive'])) {
+            abort(404);
+        }
+        $svc->deletePet($petId);
+        return redirect()->route('my.pets')->with('success', 'Mascota eliminada correctamente.');
     }
 }

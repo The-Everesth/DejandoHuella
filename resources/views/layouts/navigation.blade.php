@@ -66,6 +66,15 @@
                                 <x-dropdown-link :href="route('vet.clinics.index')">Mis Clínicas</x-dropdown-link>
                                 <x-dropdown-link :href="route('vet.appointments.index')">Citas</x-dropdown-link>
                             @endrole
+                            
+                            @role('ciudadano')
+                                <x-dropdown-link :href="route('my.pets')">
+                                    Mis mascotas
+                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('my.appointments')">
+                                    Mis citas
+                                </x-dropdown-link>
+                            @endrole
 
                             <x-dropdown-link :href="route('tickets.index')">Mensajes</x-dropdown-link>
 
