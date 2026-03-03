@@ -19,3 +19,5 @@ yarn-error.log
 /.vscode
 config/*firebase*.json
 storage/app/firebase/serviceAccountKey.json
+
+cypress.env.json

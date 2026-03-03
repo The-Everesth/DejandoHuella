@@ -24,7 +24,6 @@
     <label class="block">Fecha</label>
     <input class="border rounded p-2" type="date" name="date" value="{{ $date }}" min="{{ now()->format('Y-m-d') }}" required>
   </div>
-  <button class="border rounded px-3 py-2 bg-teal-700 text-white" type="submit">Ver horarios</button>
 </form>
 
 <form method="POST" action="{{ route('appointments.store') }}" class="space-y-3">
