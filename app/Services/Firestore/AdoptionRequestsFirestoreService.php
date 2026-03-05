@@ -43,6 +43,33 @@ class AdoptionRequestsFirestoreService
         return $this->client->getDoc($this->collection, $requestId) ?? $payload;
     }
 
+    /**
+     * Lista todas las solicitudes de adopcion realizadas por un usuario.
+     */
+    public function listByApplicant(int $applicantId): array
+    {
+        $all = $this->client->listDocs($this->collection);
+        $results = [];
+
+        foreach ($all as $docId => $doc) {
+            if ((string) ($doc['applicantId'] ?? '') !== (string) $applicantId) {
+                continue;
+            }
+
+            if (empty($doc['id'])) {
+                $doc['id'] = $docId;
+            }
+
+            $results[] = $doc;
+        }
+
+        usort($results, static function (array $a, array $b): int {
+            return strcmp((string) ($b['createdAt'] ?? ''), (string) ($a['createdAt'] ?? ''));
+        });
+
+        return $results;
+    }
+
     protected function buildRequestId(string $adoptionId, int $applicantId): string
     {
         $safeAdoptionId = preg_replace('/[^A-Za-z0-9_-]/', '_', $adoptionId) ?: 'adopcion';

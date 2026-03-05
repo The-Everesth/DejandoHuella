@@ -17,6 +17,29 @@ class AdoptionsController extends Controller
         $this->firebase = $firebase;
         $this->adoptionRequests = $adoptionRequests;
     }
+
+    /**
+     * Mostrar las solicitudes de adopcion realizadas por el usuario autenticado.
+     */
+    public function myRequests()
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        if (! $user->hasRole('ciudadano')) {
+            abort(403, 'Solo usuarios con rol ciudadano pueden ver sus solicitudes.');
+        }
+
+        $requests = collect($this->adoptionRequests->listByApplicant((int) $user->id))->values();
+
+        return view('adoptions.my-requests', [
+            'requests' => $requests,
+        ]);
+    }
+
     /**
      * Guardar una nueva adopción
      */

@@ -112,7 +112,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/adoptions/{post}/request', function () {
         return redirect()->route('adopciones.form');
     })->name('adoptions.request.store');
-    Route::redirect('/my/requests', '/adopciones-form', 302)->name('myrequests.index');
+    Route::get('/my/requests', [AdoptionsController::class, 'myRequests'])
+        ->middleware('role:ciudadano')
+        ->name('my.requests');
     Route::patch('/requests/{adoptionRequest}/status', function () {
         return redirect()->route('adopciones.form');
     })->name('requests.status');
@@ -185,6 +187,15 @@ Route::middleware(['role:ciudadano'])->group(function () {
     Route::get('my/pets/{pet}/edit', [PetController::class, 'edit'])->name('my.pets.edit');
     Route::patch('my/pets/{pet}', [PetController::class, 'update'])->name('my.pets.update');
     Route::delete('my/pets/{pet}', [PetController::class, 'destroy'])->name('my.pets.destroy');
+});
+
+//Aqui van las rutas para solicitudes de adopciones
+Route::middleware(['role:ciudadano'])->group(function () {
+    Route::get('/my/adoptions', [AdoptionsController::class, 'myAdoptions'])->name('my.adoptions');
+    Route::get('/my/adoptions/create', [AdoptionsController::class, 'create'])->name('my.adoptions.create');
+    Route::post('/my/adoptions', [AdoptionsController::class, 'store'])->name('my.adoptions.store');
+    Route::patch('/my/adoptions/{post}/toggle', [AdoptionsController::class, 'toggleActive'])->name('my.adoptions.toggle');
+    Route::get('/my/adoptions/{post}/requests', [AdoptionsController::class, 'requests'])->name('my.adoptions.requests');
 });
 
 require __DIR__.'/auth.php';

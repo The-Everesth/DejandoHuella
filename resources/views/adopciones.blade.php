@@ -671,15 +671,16 @@
                                 </div>
                                 <div class="flex items-center justify-between pt-3 border-t border-teal-200">
                                     <span class="text-xs text-gray-600">Registrado el ${fecha}</span>
-                                    ${CAN_REQUEST_ADOPTION ? `<button
+                                    <button
                                         type="button"
-                                        class="request-adoption inline-flex items-center justify-center rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition ${adoptionId ? '' : 'opacity-50 cursor-not-allowed'}"
+                                        class="request-adoption inline-flex items-center justify-center rounded-full bg-teal-700 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-700/30 ring-2 ring-teal-300 transition hover:bg-teal-800 hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-300 ${adoptionId ? '' : 'opacity-50 cursor-not-allowed'}"
                                         data-id="${adoptionId}"
                                         data-name="${String(adopcion.nombreAnimal || '').replace(/"/g, '&quot;')}"
+                                        title="${CAN_REQUEST_ADOPTION ? 'Abrir formulario de solicitud' : 'Solo usuarios con rol ciudadano pueden solicitar adopción'}"
                                         ${adoptionId ? '' : 'disabled'}
                                     >
                                         Solicitar adopción
-                                    </button>` : ''}
+                                    </button>
                                 </div>
                             </div>
                         `;

@@ -74,6 +74,10 @@
                                 <x-dropdown-link :href="route('my.appointments')">
                                     Mis citas
                                 </x-dropdown-link>
+                                <x-dropdown-link :href="route('my.requests')">
+                                    Mis solicitudes
+                                </x-dropdown-link>
+                                
                             @endrole
 
                             <x-dropdown-link :href="route('tickets.index')">Mensajes</x-dropdown-link>
