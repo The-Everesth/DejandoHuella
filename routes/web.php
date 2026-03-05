@@ -27,6 +27,9 @@ Route::delete('/adopciones-form/{id}', [AdoptionsController::class, 'destroy'])
 Route::post('/adopciones-form/{id}/imagen', [AdoptionsController::class, 'updateImage'])
     ->middleware(['auth', 'role:admin|veterinario|refugio'])
     ->name('adopciones.image.update');
+Route::post('/adopciones-form/{id}/solicitud', [AdoptionsController::class, 'storeRequest'])
+    ->middleware(['auth', 'role:ciudadano'])
+    ->name('adopciones.request.store');
 use App\Http\Controllers\Vet\ClinicController;
 use App\Http\Controllers\Vet\ClinicServiceController;
 

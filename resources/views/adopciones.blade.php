@@ -2,6 +2,7 @@
     @php($canRegisterAdoption = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
     @php($canManageAdoptionImage = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
     @php($canDeleteAdoption = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
+    @php($canRequestAdoption = auth()->check() && auth()->user()->hasRole('ciudadano'))
 
     <x-slot name="header">
         <h1 class="text-3xl font-bold text-gray-900">Adopción de Mascotas</h1>
@@ -147,20 +148,293 @@
                     </div>
                 </div>
 
+                @if($canRequestAdoption)
+                <div id="adoptionRequestModal" class="fixed inset-0 z-50 hidden items-stretch justify-center bg-gray-900/70 p-3 sm:p-4">
+                    <div class="my-2 flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl sm:my-4">
+                        <div class="flex items-start justify-between border-b border-slate-200 px-6 pb-4 pt-6">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900">Formulario de adopción</h3>
+                                <p class="mt-1 text-sm text-gray-600">Completa tu solicitud para <span id="adoptionRequestAdoptionName" class="font-semibold text-gray-900"></span>.</p>
+                            </div>
+                            <button id="closeAdoptionRequestModal" type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200" aria-label="Cerrar formulario">✕</button>
+                        </div>
+
+                        <form id="adoptionRequestForm" class="flex-1 space-y-4 overflow-y-auto px-6 pb-4 pt-4">
+                            <input type="hidden" id="adoptionRequestAdoptionId" name="adoptionId">
+
+                            <div>
+                                <label for="solicitudNombreCompleto" class="mb-1 block text-sm font-medium text-gray-700">Nombre completo <span class="text-red-500">*</span></label>
+                                <input
+                                    type="text"
+                                    id="solicitudNombreCompleto"
+                                    name="nombreCompleto"
+                                    maxlength="255"
+                                    required
+                                    placeholder="Ej: Ana María Pérez"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                >
+                            </div>
+
+                            <div>
+                                <label for="solicitudDireccionCiudad" class="mb-1 block text-sm font-medium text-gray-700">Dirección / ciudad <span class="text-red-500">*</span></label>
+                                <input
+                                    type="text"
+                                    id="solicitudDireccionCiudad"
+                                    name="direccionCiudad"
+                                    maxlength="255"
+                                    required
+                                    placeholder="Ej: Medellín, Barrio Laureles"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                >
+                            </div>
+
+                            <div>
+                                <label for="solicitudTipoVivienda" class="mb-1 block text-sm font-medium text-gray-700">Tipo de vivienda <span class="text-red-500">*</span></label>
+                                <select
+                                    id="solicitudTipoVivienda"
+                                    name="tipoVivienda"
+                                    required
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                >
+                                    <option value="">Selecciona una opción...</option>
+                                    <option value="casa">Casa</option>
+                                    <option value="apartamento">Apartamento</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <p class="mb-1 block text-sm font-medium text-gray-700">¿Tienes un patio o jardín? <span class="text-red-500">*</span></p>
+                                <div class="flex flex-wrap gap-4">
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="radio" name="patioJardin" value="si" class="text-teal-700 focus:ring-teal-700" required>
+                                        <span>Sí</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="radio" name="patioJardin" value="no" class="text-teal-700 focus:ring-teal-700" required>
+                                        <span>No</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p class="mb-1 block text-sm font-medium text-gray-700">¿Quiénes viven en tu hogar? <span class="text-red-500">*</span></p>
+                                <p class="mb-2 text-xs text-gray-500">Marca todas las opciones que apliquen</p>
+                                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="checkbox" name="hogarIntegrantes[]" value="adultos" class="rounded border-gray-300 text-teal-700 focus:ring-teal-700">
+                                        <span>Adultos</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="checkbox" name="hogarIntegrantes[]" value="ninos" class="rounded border-gray-300 text-teal-700 focus:ring-teal-700">
+                                        <span>Niños</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="checkbox" name="hogarIntegrantes[]" value="movilidad_reducida" class="rounded border-gray-300 text-teal-700 focus:ring-teal-700">
+                                        <span>Personas con movilidad reducida</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="checkbox" name="hogarIntegrantes[]" value="otros" class="rounded border-gray-300 text-teal-700 focus:ring-teal-700">
+                                        <span>Otros</span>
+                                    </label>
+                                </div>
+                                <div id="solicitudHogarOtrosWrap" class="mt-2 hidden">
+                                    <label for="solicitudHogarOtros" class="mb-1 block text-sm font-medium text-gray-700">Si marcaste "Otros", especifica <span class="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        id="solicitudHogarOtros"
+                                        name="hogarIntegrantesOtros"
+                                        maxlength="255"
+                                        placeholder="Ej: adulto mayor"
+                                        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                    >
+                                </div>
+                            </div>
+
+                            <div>
+                                <p class="mb-1 block text-sm font-medium text-gray-700">¿Tienes otros animales en casa? <span class="text-red-500">*</span></p>
+                                <div class="flex flex-wrap gap-4">
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="radio" name="tieneOtrosAnimales" value="si" class="text-teal-700 focus:ring-teal-700" required>
+                                        <span>Sí</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="radio" name="tieneOtrosAnimales" value="no" class="text-teal-700 focus:ring-teal-700" required>
+                                        <span>No</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div id="solicitudOtrosAnimalesTipoWrap" class="hidden">
+                                <label for="solicitudTiposOtrosAnimales" class="mb-1 block text-sm font-medium text-gray-700">Si tienes otros animales, ¿qué tipo? <span class="text-red-500">*</span></label>
+                                <input
+                                    type="text"
+                                    id="solicitudTiposOtrosAnimales"
+                                    name="tiposOtrosAnimales"
+                                    maxlength="255"
+                                    placeholder="Ej: perro, gato, pájaro"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                >
+                            </div>
+
+                            <div id="solicitudOtrosAnimalesEsterWrap" class="hidden">
+                                <p class="mb-1 block text-sm font-medium text-gray-700">¿Tus otros animales están castrados o esterilizados? <span class="text-red-500">*</span></p>
+                                <div class="flex flex-wrap gap-4">
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="radio" name="otrosAnimalesEsterilizados" value="si" class="text-teal-700 focus:ring-teal-700">
+                                        <span>Sí</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="radio" name="otrosAnimalesEsterilizados" value="no" class="text-teal-700 focus:ring-teal-700">
+                                        <span>No</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p class="mb-1 block text-sm font-medium text-gray-700">¿Has tenido mascotas antes? <span class="text-red-500">*</span></p>
+                                <div class="flex flex-wrap gap-4">
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="radio" name="tuvoMascotasAntes" value="si" class="text-teal-700 focus:ring-teal-700" required>
+                                        <span>Sí</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="radio" name="tuvoMascotasAntes" value="no" class="text-teal-700 focus:ring-teal-700" required>
+                                        <span>No</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div id="solicitudMascotasAnterioresWrap" class="hidden">
+                                <label for="solicitudDetalleMascotasAnteriores" class="mb-1 block text-sm font-medium text-gray-700">Si respondiste sí, ¿qué tipo de mascotas y por cuánto tiempo? <span class="text-red-500">*</span></label>
+                                <textarea
+                                    id="solicitudDetalleMascotasAnteriores"
+                                    name="detalleMascotasAnteriores"
+                                    rows="3"
+                                    maxlength="2000"
+                                    placeholder="Ej: Perro durante 8 años, gato durante 3 años"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                ></textarea>
+                            </div>
+
+                            <div>
+                                <p class="mb-1 block text-sm font-medium text-gray-700">¿Estás dispuesto a proporcionar atención veterinaria regular? <span class="text-red-500">*</span></p>
+                                <div class="flex flex-wrap gap-4">
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="radio" name="dispuestoAtencionVeterinaria" value="si" class="text-teal-700 focus:ring-teal-700" required>
+                                        <span>Sí</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="radio" name="dispuestoAtencionVeterinaria" value="no" class="text-teal-700 focus:ring-teal-700" required>
+                                        <span>No</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="solicitudExperienciaMascotas" class="mb-1 block text-sm font-medium text-gray-700">Experiencia previa con mascotas <span class="text-red-500">*</span></label>
+                                <textarea
+                                    id="solicitudExperienciaMascotas"
+                                    name="experienciaMascotas"
+                                    rows="3"
+                                    maxlength="2000"
+                                    required
+                                    placeholder="Cuéntanos tu experiencia cuidando mascotas"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                ></textarea>
+                            </div>
+
+                            <div>
+                                <label for="solicitudTelefono" class="mb-1 block text-sm font-medium text-gray-700">Teléfono de contacto <span class="text-red-500">*</span></label>
+                                <input
+                                    type="text"
+                                    id="solicitudTelefono"
+                                    name="telefono"
+                                    maxlength="40"
+                                    required
+                                    placeholder="Ej: 3001234567"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                >
+                            </div>
+
+                            <div>
+                                <label for="solicitudMensaje" class="mb-1 block text-sm font-medium text-gray-700">¿Por qué deseas adoptarlo? <span class="text-red-500">*</span></label>
+                                <textarea
+                                    id="solicitudMensaje"
+                                    name="mensaje"
+                                    rows="4"
+                                    maxlength="2000"
+                                    required
+                                    placeholder="Cuéntanos brevemente sobre tu experiencia y hogar para la mascota"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                ></textarea>
+                            </div>
+
+                            <div class="rounded-xl border border-slate-200 bg-white p-3">
+                                <label for="solicitudConfirmacion" class="inline-flex items-start gap-2 text-sm text-slate-700">
+                                    <input
+                                        type="checkbox"
+                                        id="solicitudConfirmacion"
+                                        name="confirmacionRespuestas"
+                                        class="mt-0.5 rounded border-gray-300 text-teal-700 focus:ring-teal-700"
+                                    >
+                                    <span>Confirmo que mis respuestas son correctas y autorizo su uso para evaluar mi solicitud de adopción.</span>
+                                </label>
+                            </div>
+
+                            <div class="sticky bottom-0 -mx-6 mt-2 flex items-center justify-end gap-2 border-t border-slate-200 bg-white px-6 pb-1 pt-3">
+                                <button type="button" id="cancelAdoptionRequest" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancelar</button>
+                                <button type="submit" id="adoptionRequestSubmitBtn" class="rounded-full bg-[#F5E7DA] px-4 py-2 text-sm font-bold text-black hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50" disabled aria-disabled="true">Enviar solicitud</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="adoptionRequestSuccessModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-gray-900/70 p-4">
+                    <div class="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
+                        <div class="mb-2 flex justify-end">
+                            <button id="closeAdoptionRequestSuccessModal" type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200" aria-label="Cerrar confirmación">✕</button>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900">¡Gracias por tu solicitud!</h3>
+                        <p id="adoptionRequestSuccessMessage" class="mt-3 text-sm leading-relaxed text-gray-700">
+                            Hemos recibido tu solicitud y estamos revisando tu información. Nos pondremos en contacto contigo pronto para continuar con el proceso de adopción. ¡Gracias por elegir darle un hogar amoroso a una de nuestras mascotas!
+                        </p>
+                        <div class="mt-6 flex justify-end">
+                            <button id="confirmAdoptionRequestSuccessModal" type="button" class="rounded-full bg-[#F5E7DA] px-5 py-2 text-sm font-bold text-black hover:opacity-90">Entendido</button>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
     <script>
         const API_URL = '/api/adoptions';
         const STORE_URL = @json(route('adopciones.store'));
         const DELETE_URL_TEMPLATE = @json(route('adopciones.destroy', ['id' => '__ID__']));
         const UPDATE_IMAGE_URL_TEMPLATE = @json(route('adopciones.image.update', ['id' => '__ID__']));
+        const REQUEST_URL_TEMPLATE = @json(route('adopciones.request.store', ['id' => '__ID__']));
         const IS_AUTHENTICATED = @json(auth()->check());
         const IS_REFUGIO = @json(auth()->check() && auth()->user()->hasRole('refugio'));
         const CAN_MANAGE_ADOPTION_IMAGE = @json($canManageAdoptionImage);
         const CAN_DELETE_ADOPTION = @json($canDeleteAdoption);
         const CAN_REGISTER_ADOPTION = @json($canRegisterAdoption);
+        const CAN_REQUEST_ADOPTION = @json($canRequestAdoption);
         const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         const IMAGE_PREVIEW_MODAL = document.getElementById('imagePreviewModal');
         const IMAGE_PREVIEW_MODAL_IMG = document.getElementById('imagePreviewModalImg');
         const CLOSE_IMAGE_PREVIEW_MODAL = document.getElementById('closeImagePreviewModal');
+        const ADOPTION_REQUEST_MODAL = document.getElementById('adoptionRequestModal');
+        const ADOPTION_REQUEST_SUCCESS_MODAL = document.getElementById('adoptionRequestSuccessModal');
+        const CLOSE_ADOPTION_REQUEST_MODAL = document.getElementById('closeAdoptionRequestModal');
+        const CLOSE_ADOPTION_REQUEST_SUCCESS_MODAL = document.getElementById('closeAdoptionRequestSuccessModal');
+        const CONFIRM_ADOPTION_REQUEST_SUCCESS_MODAL = document.getElementById('confirmAdoptionRequestSuccessModal');
+        const CANCEL_ADOPTION_REQUEST_MODAL = document.getElementById('cancelAdoptionRequest');
+        const ADOPTION_REQUEST_FORM = document.getElementById('adoptionRequestForm');
+        const ADOPTION_REQUEST_ADOPTION_ID = document.getElementById('adoptionRequestAdoptionId');
+        const ADOPTION_REQUEST_ADOPTION_NAME = document.getElementById('adoptionRequestAdoptionName');
+        const ADOPTION_REQUEST_SUCCESS_MESSAGE = document.getElementById('adoptionRequestSuccessMessage');
+        const ADOPTION_REQUEST_CONFIRMATION = document.getElementById('solicitudConfirmacion');
+        const ADOPTION_REQUEST_SUBMIT_BTN = document.getElementById('adoptionRequestSubmitBtn');
+        const ADOPTION_REQUEST_SUCCESS_TEXT = 'Hemos recibido tu solicitud y estamos revisando tu información. Nos pondremos en contacto contigo pronto para continuar con el proceso de adopción. ¡Gracias por elegir darle un hogar amoroso a una de nuestras mascotas!';
 
         function openImagePreview(imageUrl, imageAlt = 'Vista previa') {
             if (!IMAGE_PREVIEW_MODAL || !IMAGE_PREVIEW_MODAL_IMG || !imageUrl) {
@@ -185,15 +459,102 @@
             document.body.classList.remove('overflow-hidden');
         }
 
+        function openAdoptionRequestModal(adoptionId, adoptionName) {
+            if (!ADOPTION_REQUEST_MODAL || !ADOPTION_REQUEST_ADOPTION_ID || !ADOPTION_REQUEST_ADOPTION_NAME) {
+                return;
+            }
+
+            ADOPTION_REQUEST_ADOPTION_ID.value = adoptionId;
+            ADOPTION_REQUEST_ADOPTION_NAME.textContent = adoptionName || 'esta mascota';
+            ADOPTION_REQUEST_MODAL.classList.remove('hidden');
+            ADOPTION_REQUEST_MODAL.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+            updateAdoptionRequestConditionalFields();
+            updateAdoptionRequestSubmitState();
+        }
+
+        function closeAdoptionRequestModal() {
+            if (!ADOPTION_REQUEST_MODAL || !ADOPTION_REQUEST_FORM) {
+                return;
+            }
+
+            ADOPTION_REQUEST_MODAL.classList.add('hidden');
+            ADOPTION_REQUEST_MODAL.classList.remove('flex');
+            ADOPTION_REQUEST_FORM.reset();
+            document.body.classList.remove('overflow-hidden');
+            updateAdoptionRequestConditionalFields();
+            updateAdoptionRequestSubmitState();
+        }
+
+        function openAdoptionRequestSuccessModal() {
+            if (!ADOPTION_REQUEST_SUCCESS_MODAL) {
+                return;
+            }
+
+            if (ADOPTION_REQUEST_SUCCESS_MESSAGE) {
+                ADOPTION_REQUEST_SUCCESS_MESSAGE.textContent = ADOPTION_REQUEST_SUCCESS_TEXT;
+            }
+
+            ADOPTION_REQUEST_SUCCESS_MODAL.classList.remove('hidden');
+            ADOPTION_REQUEST_SUCCESS_MODAL.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeAdoptionRequestSuccessModal() {
+            if (!ADOPTION_REQUEST_SUCCESS_MODAL) {
+                return;
+            }
+
+            ADOPTION_REQUEST_SUCCESS_MODAL.classList.add('hidden');
+            ADOPTION_REQUEST_SUCCESS_MODAL.classList.remove('flex');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        function updateAdoptionRequestSubmitState() {
+            if (!ADOPTION_REQUEST_SUBMIT_BTN) {
+                return;
+            }
+
+            const confirmed = Boolean(ADOPTION_REQUEST_CONFIRMATION?.checked);
+            ADOPTION_REQUEST_SUBMIT_BTN.disabled = !confirmed;
+            ADOPTION_REQUEST_SUBMIT_BTN.setAttribute('aria-disabled', confirmed ? 'false' : 'true');
+        }
+
+        function setConditionalVisibility(elementId, shouldShow) {
+            const element = document.getElementById(elementId);
+            if (!element) {
+                return;
+            }
+
+            if (shouldShow) {
+                element.classList.remove('hidden');
+                return;
+            }
+
+            element.classList.add('hidden');
+        }
+
+        function updateAdoptionRequestConditionalFields() {
+            const hogarOtrosSelected = document.querySelector('input[name="hogarIntegrantes[]"][value="otros"]')?.checked;
+            setConditionalVisibility('solicitudHogarOtrosWrap', Boolean(hogarOtrosSelected));
+
+            const tieneOtrosAnimales = document.querySelector('input[name="tieneOtrosAnimales"]:checked')?.value === 'si';
+            setConditionalVisibility('solicitudOtrosAnimalesTipoWrap', tieneOtrosAnimales);
+            setConditionalVisibility('solicitudOtrosAnimalesEsterWrap', tieneOtrosAnimales);
+
+            const tuvoMascotasAntes = document.querySelector('input[name="tuvoMascotasAntes"]:checked')?.value === 'si';
+            setConditionalVisibility('solicitudMascotasAnterioresWrap', tuvoMascotasAntes);
+        }
+
         // Función para mostrar alertas con Tailwind
         function showAlert(message, type) {
             const alertDiv = document.getElementById('alert');
             alertDiv.textContent = message;
             
             if (type === 'success') {
-                alertDiv.className = 'mb-4 rounded-lg p-4 text-sm font-medium bg-green-50 text-green-800 border border-green-200';
+                alertDiv.className = 'mb-4 rounded-lg p-4 text-sm font-medium whitespace-pre-line bg-green-50 text-green-800 border border-green-200';
             } else {
-                alertDiv.className = 'mb-4 rounded-lg p-4 text-sm font-medium bg-red-50 text-red-800 border border-red-200';
+                alertDiv.className = 'mb-4 rounded-lg p-4 text-sm font-medium whitespace-pre-line bg-red-50 text-red-800 border border-red-200';
             }
             
             alertDiv.classList.remove('hidden');
@@ -310,6 +671,15 @@
                                 </div>
                                 <div class="flex items-center justify-between pt-3 border-t border-teal-200">
                                     <span class="text-xs text-gray-600">Registrado el ${fecha}</span>
+                                    ${CAN_REQUEST_ADOPTION ? `<button
+                                        type="button"
+                                        class="request-adoption inline-flex items-center justify-center rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition ${adoptionId ? '' : 'opacity-50 cursor-not-allowed'}"
+                                        data-id="${adoptionId}"
+                                        data-name="${String(adopcion.nombreAnimal || '').replace(/"/g, '&quot;')}"
+                                        ${adoptionId ? '' : 'disabled'}
+                                    >
+                                        Solicitar adopción
+                                    </button>` : ''}
                                 </div>
                             </div>
                         `;
@@ -343,9 +713,53 @@
             });
         }
 
+        if (CLOSE_ADOPTION_REQUEST_MODAL) {
+            CLOSE_ADOPTION_REQUEST_MODAL.addEventListener('click', closeAdoptionRequestModal);
+        }
+
+        if (CANCEL_ADOPTION_REQUEST_MODAL) {
+            CANCEL_ADOPTION_REQUEST_MODAL.addEventListener('click', closeAdoptionRequestModal);
+        }
+
+        if (ADOPTION_REQUEST_MODAL) {
+            ADOPTION_REQUEST_MODAL.addEventListener('click', function (event) {
+                if (event.target === ADOPTION_REQUEST_MODAL) {
+                    closeAdoptionRequestModal();
+                }
+            });
+        }
+
+        if (CLOSE_ADOPTION_REQUEST_SUCCESS_MODAL) {
+            CLOSE_ADOPTION_REQUEST_SUCCESS_MODAL.addEventListener('click', closeAdoptionRequestSuccessModal);
+        }
+
+        if (CONFIRM_ADOPTION_REQUEST_SUCCESS_MODAL) {
+            CONFIRM_ADOPTION_REQUEST_SUCCESS_MODAL.addEventListener('click', closeAdoptionRequestSuccessModal);
+        }
+
+        if (ADOPTION_REQUEST_SUCCESS_MODAL) {
+            ADOPTION_REQUEST_SUCCESS_MODAL.addEventListener('click', function (event) {
+                if (event.target === ADOPTION_REQUEST_SUCCESS_MODAL) {
+                    closeAdoptionRequestSuccessModal();
+                }
+            });
+        }
+
+        document.querySelectorAll('input[name="hogarIntegrantes[]"], input[name="tieneOtrosAnimales"], input[name="tuvoMascotasAntes"]').forEach((element) => {
+            element.addEventListener('change', updateAdoptionRequestConditionalFields);
+        });
+
+        if (ADOPTION_REQUEST_CONFIRMATION) {
+            ADOPTION_REQUEST_CONFIRMATION.addEventListener('change', updateAdoptionRequestSubmitState);
+        }
+
+        updateAdoptionRequestSubmitState();
+
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
                 closeImagePreview();
+                closeAdoptionRequestModal();
+                closeAdoptionRequestSuccessModal();
             }
         });
 
@@ -354,6 +768,28 @@
             const previewImage = event.target.closest('.preview-image');
             if (previewImage) {
                 openImagePreview(previewImage.dataset.fullImage || previewImage.src, previewImage.dataset.imageAlt || previewImage.alt || 'Vista previa');
+                return;
+            }
+
+            const requestBtn = event.target.closest('.request-adoption');
+            if (requestBtn && !requestBtn.disabled) {
+                if (!IS_AUTHENTICATED) {
+                    showAlert('Debes iniciar sesión para solicitar una adopción', 'error');
+                    return;
+                }
+
+                if (!CAN_REQUEST_ADOPTION) {
+                    showAlert('Solo usuarios con rol ciudadano pueden enviar solicitudes', 'error');
+                    return;
+                }
+
+                const adoptionId = requestBtn.dataset.id;
+                if (!adoptionId) {
+                    showAlert('No se pudo identificar la mascota', 'error');
+                    return;
+                }
+
+                openAdoptionRequestModal(adoptionId, requestBtn.dataset.name || 'esta mascota');
                 return;
             }
 
@@ -477,6 +913,133 @@
             }
         });
 
+        if (ADOPTION_REQUEST_FORM) {
+            ADOPTION_REQUEST_FORM.addEventListener('submit', async function (event) {
+                event.preventDefault();
+
+                if (!IS_AUTHENTICATED) {
+                    showAlert('Debes iniciar sesión para solicitar una adopción', 'error');
+                    return;
+                }
+
+                if (!CAN_REQUEST_ADOPTION) {
+                    showAlert('Solo usuarios con rol ciudadano pueden enviar solicitudes', 'error');
+                    return;
+                }
+
+                const adoptionId = ADOPTION_REQUEST_ADOPTION_ID?.value;
+                const nombreCompleto = document.getElementById('solicitudNombreCompleto')?.value?.trim();
+                const direccionCiudad = document.getElementById('solicitudDireccionCiudad')?.value?.trim();
+                const tipoVivienda = document.getElementById('solicitudTipoVivienda')?.value;
+                const experienciaMascotas = document.getElementById('solicitudExperienciaMascotas')?.value?.trim();
+                const patioJardin = document.querySelector('input[name="patioJardin"]:checked')?.value || '';
+                const hogarIntegrantes = Array.from(document.querySelectorAll('input[name="hogarIntegrantes[]"]:checked')).map((element) => element.value);
+                const hogarIntegrantesOtros = document.getElementById('solicitudHogarOtros')?.value?.trim();
+                const tieneOtrosAnimales = document.querySelector('input[name="tieneOtrosAnimales"]:checked')?.value || '';
+                const tiposOtrosAnimales = document.getElementById('solicitudTiposOtrosAnimales')?.value?.trim();
+                const otrosAnimalesEsterilizados = document.querySelector('input[name="otrosAnimalesEsterilizados"]:checked')?.value || '';
+                const tuvoMascotasAntes = document.querySelector('input[name="tuvoMascotasAntes"]:checked')?.value || '';
+                const detalleMascotasAnteriores = document.getElementById('solicitudDetalleMascotasAnteriores')?.value?.trim();
+                const dispuestoAtencionVeterinaria = document.querySelector('input[name="dispuestoAtencionVeterinaria"]:checked')?.value || '';
+                const telefono = document.getElementById('solicitudTelefono')?.value?.trim();
+                const mensaje = document.getElementById('solicitudMensaje')?.value?.trim();
+
+                if (!adoptionId) {
+                    showAlert('No se pudo identificar la mascota', 'error');
+                    return;
+                }
+
+                if (!nombreCompleto || !direccionCiudad || !tipoVivienda || !experienciaMascotas || !patioJardin || !tieneOtrosAnimales || !tuvoMascotasAntes || !dispuestoAtencionVeterinaria || !telefono || !mensaje) {
+                    showAlert('Completa todos los campos obligatorios del formulario', 'error');
+                    return;
+                }
+
+                if (hogarIntegrantes.length === 0) {
+                    showAlert('Selecciona al menos una opción en "¿Quiénes viven en tu hogar?"', 'error');
+                    return;
+                }
+
+                if (hogarIntegrantes.includes('otros') && !hogarIntegrantesOtros) {
+                    showAlert('Debes especificar la opción "Otros" del hogar', 'error');
+                    return;
+                }
+
+                if (tieneOtrosAnimales === 'si' && (!tiposOtrosAnimales || !otrosAnimalesEsterilizados)) {
+                    showAlert('Completa la información de tus otros animales', 'error');
+                    return;
+                }
+
+                if (tuvoMascotasAntes === 'si' && !detalleMascotasAnteriores) {
+                    showAlert('Describe qué mascotas has tenido y por cuánto tiempo', 'error');
+                    return;
+                }
+
+                const submitBtn = ADOPTION_REQUEST_SUBMIT_BTN || ADOPTION_REQUEST_FORM.querySelector('button[type="submit"]');
+                const originalText = submitBtn?.textContent || 'Enviar solicitud';
+
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Enviando...';
+                }
+
+                try {
+                    const formData = new FormData();
+                    formData.append('nombreCompleto', nombreCompleto);
+                    formData.append('direccionCiudad', direccionCiudad);
+                    formData.append('tipoVivienda', tipoVivienda);
+                    formData.append('experienciaMascotas', experienciaMascotas);
+                    formData.append('patioJardin', patioJardin);
+                    hogarIntegrantes.forEach((item) => formData.append('hogarIntegrantes[]', item));
+                    if (hogarIntegrantesOtros) {
+                        formData.append('hogarIntegrantesOtros', hogarIntegrantesOtros);
+                    }
+                    formData.append('tieneOtrosAnimales', tieneOtrosAnimales);
+                    if (tiposOtrosAnimales) {
+                        formData.append('tiposOtrosAnimales', tiposOtrosAnimales);
+                    }
+                    if (otrosAnimalesEsterilizados) {
+                        formData.append('otrosAnimalesEsterilizados', otrosAnimalesEsterilizados);
+                    }
+                    formData.append('tuvoMascotasAntes', tuvoMascotasAntes);
+                    if (detalleMascotasAnteriores) {
+                        formData.append('detalleMascotasAnteriores', detalleMascotasAnteriores);
+                    }
+                    formData.append('dispuestoAtencionVeterinaria', dispuestoAtencionVeterinaria);
+                    formData.append('telefono', telefono);
+                    formData.append('mensaje', mensaje);
+
+                    const requestUrl = REQUEST_URL_TEMPLATE.replace('__ID__', encodeURIComponent(adoptionId));
+                    const response = await fetch(requestUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': CSRF_TOKEN || '',
+                        },
+                        body: formData,
+                    });
+
+                    const result = await response.json().catch(() => ({}));
+
+                    if (!response.ok || !result.success) {
+                        showAlert('Error: ' + (result.message || 'No se pudo enviar la solicitud'), 'error');
+                        return;
+                    }
+
+                    closeAdoptionRequestModal();
+                    openAdoptionRequestSuccessModal();
+                } catch (error) {
+                    showAlert('Error: ' + error.message, 'error');
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = originalText;
+                    }
+
+                    updateAdoptionRequestSubmitState();
+                }
+            });
+        }
+
         // Agregar evento para el formulario
         const adopcionForm = document.getElementById('adopcionForm');
         if (adopcionForm) {
@@ -511,7 +1074,7 @@
             }
 
             // Desactivar botón mientras se envía
-            const btn = document.querySelector('button[type="submit"]');
+            const btn = adopcionForm.querySelector('button[type="submit"]');
             btn.disabled = true;
             btn.textContent = 'Registrando...';
 

@@ -27,6 +27,10 @@ Route::prefix('adoptions')->group(function () {
         Route::post('/', [AdoptionsController::class, 'store']);
     });
 
+    Route::middleware(['auth:sanctum', 'role:ciudadano'])->group(function () {
+        Route::post('/{id}/request', [AdoptionsController::class, 'storeRequest']);
+    });
+
     Route::middleware(['auth:sanctum', 'role:admin|veterinario|refugio'])->group(function () {
         Route::post('/firebase', [AdoptionsController::class, 'storeToFirebase']);
         Route::put('/{id}', [AdoptionsController::class, 'update']);
