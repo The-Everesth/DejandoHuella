@@ -20,7 +20,9 @@ use App\Http\Controllers\ClinicsController;
 
 // Ruta para el formulario de adopciones
 Route::view('/adopciones-form', 'adopciones')->name('adopciones.form');
-Route::post('/adopciones-form', [AdoptionsController::class, 'store'])->middleware('auth')->name('adopciones.store');
+Route::post('/adopciones-form', [AdoptionsController::class, 'store'])
+    ->middleware(['auth', 'role:admin|veterinario|refugio'])
+    ->name('adopciones.store');
 Route::delete('/adopciones-form/{id}', [AdoptionsController::class, 'destroy'])
     ->middleware(['auth', 'role:admin|veterinario|refugio'])
     ->name('adopciones.destroy');
@@ -115,9 +117,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/my/requests', [AdoptionsController::class, 'myRequests'])
         ->middleware('role:ciudadano')
         ->name('my.requests');
-    Route::patch('/requests/{adoptionRequest}/status', function () {
-        return redirect()->route('adopciones.form');
-    })->name('requests.status');
+    Route::get('/my/published-requests', [AdoptionsController::class, 'publishedRequests'])
+        ->middleware('role:admin|veterinario|refugio')
+        ->name('my.published.requests');
+    Route::patch('/requests/{requestId}/status', [AdoptionsController::class, 'updateRequestStatus'])
+        ->middleware('role:admin|veterinario|refugio')
+        ->name('requests.status');
 
     // Citas (ciudadano)
     Route::get('/appointments/create/{clinic}/{service}', [AppointmentController::class, 'create'])->name('appointments.create');

@@ -43,6 +43,11 @@ class AdoptionRequestsFirestoreService
         return $this->client->getDoc($this->collection, $requestId) ?? $payload;
     }
 
+    public function get(string $requestId): ?array
+    {
+        return $this->client->getDoc($this->collection, $requestId);
+    }
+
     /**
      * Lista todas las solicitudes de adopcion realizadas por un usuario.
      */
@@ -63,11 +68,64 @@ class AdoptionRequestsFirestoreService
             $results[] = $doc;
         }
 
-        usort($results, static function (array $a, array $b): int {
-            return strcmp((string) ($b['createdAt'] ?? ''), (string) ($a['createdAt'] ?? ''));
-        });
+        $this->sortNewestFirst($results);
 
         return $results;
+    }
+
+    /**
+     * Lista solicitudes de adopcion asociadas a publicaciones especificas.
+     *
+     * @param  array<int, string>  $adoptionIds
+     */
+    public function listByAdoptionIds(array $adoptionIds): array
+    {
+        $normalizedIds = array_values(array_unique(array_filter(
+            array_map(static fn ($id): string => trim((string) $id), $adoptionIds),
+            static fn (string $id): bool => $id !== ''
+        )));
+
+        if (empty($normalizedIds)) {
+            return [];
+        }
+
+        $lookup = array_fill_keys($normalizedIds, true);
+        $all = $this->client->listDocs($this->collection);
+        $results = [];
+
+        foreach ($all as $docId => $doc) {
+            $adoptionId = (string) ($doc['adoptionId'] ?? '');
+            if ($adoptionId === '' || ! isset($lookup[$adoptionId])) {
+                continue;
+            }
+
+            if (empty($doc['id'])) {
+                $doc['id'] = $docId;
+            }
+
+            $results[] = $doc;
+        }
+
+        $this->sortNewestFirst($results);
+
+        return $results;
+    }
+
+    public function setStatus(string $requestId, string $status, array $extraData = []): bool
+    {
+        $payload = array_merge([
+            'status' => $status,
+            'updatedAt' => now()->toIso8601String(),
+        ], $extraData);
+
+        return $this->client->patchDoc($this->collection, $requestId, $payload);
+    }
+
+    protected function sortNewestFirst(array &$items): void
+    {
+        usort($items, static function (array $a, array $b): int {
+            return strcmp((string) ($b['createdAt'] ?? ''), (string) ($a['createdAt'] ?? ''));
+        });
     }
 
     protected function buildRequestId(string $adoptionId, int $applicantId): string

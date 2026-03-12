@@ -3,6 +3,8 @@
     @php($canManageAdoptionImage = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
     @php($canDeleteAdoption = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
     @php($canRequestAdoption = auth()->check() && auth()->user()->hasRole('ciudadano'))
+    @php($canManageAllAdoptions = auth()->check() && auth()->user()->hasRole('admin'))
+    @php($currentUserId = auth()->id())
 
     <x-slot name="header">
         <h1 class="text-3xl font-bold text-gray-900">Adopción de Mascotas</h1>
@@ -414,6 +416,8 @@
         const REQUEST_URL_TEMPLATE = @json(route('adopciones.request.store', ['id' => '__ID__']));
         const IS_AUTHENTICATED = @json(auth()->check());
         const IS_REFUGIO = @json(auth()->check() && auth()->user()->hasRole('refugio'));
+        const CURRENT_USER_ID = @json($currentUserId);
+        const CAN_MANAGE_ALL_ADOPTIONS = @json($canManageAllAdoptions);
         const CAN_MANAGE_ADOPTION_IMAGE = @json($canManageAdoptionImage);
         const CAN_DELETE_ADOPTION = @json($canDeleteAdoption);
         const CAN_REGISTER_ADOPTION = @json($canRegisterAdoption);
@@ -623,8 +627,12 @@
                     adopcionesArray.forEach((adopcion) => {
                         const adoptionId = adopcion.id || adopcion._docId || '';
                         const fecha = new Date(adopcion.fecha).toLocaleDateString('es-ES');
-                        const canDelete = Boolean(adoptionId) && CAN_DELETE_ADOPTION;
-                        const canChangeImage = Boolean(adoptionId) && CAN_MANAGE_ADOPTION_IMAGE;
+                        const ownerId = Number(adopcion.createdBy || 0);
+                        const isOwner = CURRENT_USER_ID !== null && Number(CURRENT_USER_ID) === ownerId;
+                        const canModifyThisAdoption = CAN_MANAGE_ALL_ADOPTIONS || isOwner;
+                        const canDelete = Boolean(adoptionId) && CAN_DELETE_ADOPTION && canModifyThisAdoption;
+                        const canChangeImage = Boolean(adoptionId) && CAN_MANAGE_ADOPTION_IMAGE && canModifyThisAdoption;
+                        const showManagementControls = canDelete || canChangeImage;
                         const html = `
                             <div class="group p-4 rounded-2xl border bg-teal-50 hover:shadow-md transition-all duration-200 cursor-pointer">
                                 <div class="flex items-start justify-between mb-3">
@@ -632,20 +640,18 @@
                                         <h3 class="text-lg font-extrabold text-gray-900">${adopcion.nombreAnimal}</h3>
                                         <p class="text-sm text-gray-600">${adopcion.tipoAnimal}</p>
                                     </div>
-                                    ${CAN_MANAGE_ADOPTION_IMAGE || CAN_DELETE_ADOPTION ? `<div class="flex items-center gap-2">
-                                        <button
+                                    ${showManagementControls ? `<div class="flex items-center gap-2">
+                                        ${canChangeImage ? `<button
                                             type="button"
-                                            class="change-image inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold border border-blue-200 bg-white text-blue-700 hover:bg-blue-50 transition ${canChangeImage ? '' : 'opacity-50 cursor-not-allowed'}"
+                                            class="change-image inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold border border-blue-200 bg-white text-blue-700 hover:bg-blue-50 transition"
                                             data-id="${adoptionId}"
-                                            ${canChangeImage ? '' : 'disabled'}
                                         >
                                             Cambiar foto
-                                        </button>
-                                        ${CAN_DELETE_ADOPTION ? `<button
+                                        </button>` : ''}
+                                        ${canDelete ? `<button
                                             type="button"
-                                            class="delete-adopcion inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold border border-red-200 bg-white text-red-700 hover:bg-red-50 transition ${canDelete ? '' : 'opacity-50 cursor-not-allowed'}"
+                                            class="delete-adopcion inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold border border-red-200 bg-white text-red-700 hover:bg-red-50 transition"
                                             data-id="${adoptionId}"
-                                            ${canDelete ? '' : 'disabled'}
                                         >
                                             Eliminar
                                         </button>` : ''}

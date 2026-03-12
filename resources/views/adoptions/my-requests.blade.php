@@ -9,8 +9,17 @@
             @php
                 $status = strtolower((string) ($item['status'] ?? 'pendiente'));
                 $isApproved = in_array($status, ['aprobada', 'approved'], true);
-                $statusLabel = $isApproved ? 'Aprobada' : 'Pendiente';
-                $statusClasses = $isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+                $isRejected = in_array($status, ['rechazada', 'rejected'], true);
+                $statusLabel = 'Pendiente';
+                $statusClasses = 'bg-yellow-100 text-yellow-800';
+
+                if ($isApproved) {
+                    $statusLabel = 'Aprobada';
+                    $statusClasses = 'bg-green-100 text-green-800';
+                } elseif ($isRejected) {
+                    $statusLabel = 'Rechazada';
+                    $statusClasses = 'bg-red-100 text-red-800';
+                }
             @endphp
 
             <div class="p-4 border rounded bg-white">

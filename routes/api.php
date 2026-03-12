@@ -23,7 +23,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::prefix('adoptions')->group(function () {
     Route::get('/', [AdoptionsController::class, 'index']);
     Route::get('/{id}', [AdoptionsController::class, 'show']);
-    Route::middleware(['auth:sanctum'])->group(function () {
+    Route::middleware(['auth:sanctum', 'role:admin|veterinario|refugio'])->group(function () {
         Route::post('/', [AdoptionsController::class, 'store']);
     });
 

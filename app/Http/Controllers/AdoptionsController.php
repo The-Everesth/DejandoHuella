@@ -41,6 +41,95 @@ class AdoptionsController extends Controller
     }
 
     /**
+     * Mostrar las solicitudes de adopcion recibidas en publicaciones del usuario.
+     */
+    public function publishedRequests()
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        if (! $user->hasAnyRole('admin', 'veterinario', 'refugio')) {
+            abort(403, 'Solo usuarios admin, veterinario o refugio pueden ver solicitudes recibidas.');
+        }
+
+        $isAdmin = $user->hasRole('admin');
+        $ownedAdoptions = [];
+        foreach ($this->firebase->list() as $docId => $adoption) {
+            if (! $isAdmin && (int) ($adoption['createdBy'] ?? 0) !== (int) $user->id) {
+                continue;
+            }
+
+            $adoptionId = (string) ($adoption['id'] ?? $adoption['_docId'] ?? $docId);
+            if ($adoptionId === '') {
+                continue;
+            }
+
+            $adoption['id'] = $adoptionId;
+            $ownedAdoptions[$adoptionId] = $adoption;
+        }
+
+        $requests = collect($this->adoptionRequests->listByAdoptionIds(array_keys($ownedAdoptions)))
+            ->map(function (array $item) use ($ownedAdoptions): array {
+                $adoptionId = (string) ($item['adoptionId'] ?? '');
+                $adoption = $ownedAdoptions[$adoptionId] ?? [];
+
+                if (empty($item['petName']) && ! empty($adoption['nombreAnimal'])) {
+                    $item['petName'] = (string) $adoption['nombreAnimal'];
+                }
+
+                return $item;
+            })
+            ->values();
+
+        return view('adoptions.published-requests', [
+            'requests' => $requests,
+        ]);
+    }
+
+    /**
+     * Aprobar o rechazar una solicitud de adopcion.
+     */
+    public function updateRequestStatus(Request $request, string $requestId)
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:aprobada,rechazada',
+        ]);
+
+        $solicitud = $this->adoptionRequests->get($requestId);
+        if (! is_array($solicitud)) {
+            return back()->with('error', 'La solicitud no fue encontrada.');
+        }
+
+        $adoptionId = (string) ($solicitud['adoptionId'] ?? '');
+        if ($adoptionId === '') {
+            return back()->with('error', 'La solicitud no tiene una publicación asociada válida.');
+        }
+
+        $adopcion = $this->firebase->get($adoptionId);
+        if (! is_array($adopcion)) {
+            return back()->with('error', 'La publicación asociada no fue encontrada.');
+        }
+
+        if (! $this->canCurrentUserManageAdoption($adopcion)) {
+            abort(403, 'No tienes permisos para cambiar el estado de esta solicitud.');
+        }
+
+        $user = auth()->user();
+
+        $this->adoptionRequests->setStatus($requestId, (string) $validated['status'], [
+            'reviewedAt' => now()->toIso8601String(),
+            'reviewedBy' => $user ? (int) $user->id : null,
+        ]);
+
+        $statusLabel = $validated['status'] === 'aprobada' ? 'aprobada' : 'rechazada';
+
+        return back()->with('success', 'La solicitud fue '.$statusLabel.' correctamente.');
+    }
+
+    /**
      * Guardar una nueva adopción
      */
     public function store(Request $request)
@@ -203,6 +292,19 @@ class AdoptionsController extends Controller
         ]);
 
         try {
+            $adopcion = $this->firebase->get($id);
+            if (! is_array($adopcion)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Adopción no encontrada'
+                ], 404);
+            }
+
+            $authorizationError = $this->forbidIfCannotManageAdoption($adopcion);
+            if ($authorizationError) {
+                return $authorizationError;
+            }
+
             $updated = $this->firebase->update($id, $validated);
             if (! $updated) {
                 return response()->json([
@@ -233,6 +335,18 @@ class AdoptionsController extends Controller
     {
         try {
             $adoption = $this->firebase->get($id);
+
+            if (! is_array($adoption)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Adopción no encontrada'
+                ], 404);
+            }
+
+            $authorizationError = $this->forbidIfCannotManageAdoption($adoption);
+            if ($authorizationError) {
+                return $authorizationError;
+            }
 
             $deleted = $this->firebase->delete($id);
 
@@ -279,6 +393,11 @@ class AdoptionsController extends Controller
                     'success' => false,
                     'message' => 'Adopción no encontrada'
                 ], 404);
+            }
+
+            $authorizationError = $this->forbidIfCannotManageAdoption($adoption);
+            if ($authorizationError) {
+                return $authorizationError;
             }
 
             if (! $request->hasFile('fotoMascota')) {
@@ -411,6 +530,7 @@ class AdoptionsController extends Controller
 
             $solicitud = $this->adoptionRequests->createForAdoption($id, (int) $user->id, [
                 'petName' => (string) ($adopcion['nombreAnimal'] ?? ''),
+                'publisherId' => isset($adopcion['createdBy']) ? (int) $adopcion['createdBy'] : null,
                 'applicantName' => (string) ($user->name ?? ''),
                 'applicantEmail' => (string) ($user->email ?? ''),
                 'nombreCompleto' => (string) $validated['nombreCompleto'],
@@ -446,5 +566,45 @@ class AdoptionsController extends Controller
                 'message' => 'Error al enviar la solicitud: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Solo el publicador de la mascota o un admin puede modificar la publicación.
+     */
+    protected function forbidIfCannotManageAdoption(array $adoption)
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes iniciar sesión para modificar esta adopción'
+            ], 401);
+        }
+
+        if (! $this->canCurrentUserManageAdoption($adoption)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo el usuario que publicó esta mascota puede modificarla'
+            ], 403);
+        }
+
+        return null;
+    }
+
+    protected function canCurrentUserManageAdoption(array $adoption): bool
+    {
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasRole('admin')) {
+            return true;
+        }
+
+        $ownerId = (int) ($adoption['createdBy'] ?? 0);
+
+        return $ownerId === (int) $user->id;
     }
 }
