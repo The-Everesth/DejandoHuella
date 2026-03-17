@@ -12,6 +12,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\SupportTicketController;
 
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdoptionModerationController;
 use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\Admin\MedicalServiceController;
 use App\Http\Controllers\Admin\SupportTicketAdminController;
@@ -20,13 +21,24 @@ use App\Http\Controllers\ClinicsController;
 
 // Ruta para el formulario de adopciones
 Route::view('/adopciones-form', 'adopciones')->name('adopciones.form');
-Route::post('/adopciones-form', [AdoptionsController::class, 'store'])->middleware('auth')->name('adopciones.store');
+Route::post('/adopciones-form', [AdoptionsController::class, 'store'])
+    ->middleware(['auth', 'role:veterinario|refugio'])
+    ->name('adopciones.store');
 Route::delete('/adopciones-form/{id}', [AdoptionsController::class, 'destroy'])
-    ->middleware(['auth', 'role:admin|veterinario|refugio'])
+    ->middleware(['auth', 'role:veterinario|refugio'])
     ->name('adopciones.destroy');
 Route::post('/adopciones-form/{id}/imagen', [AdoptionsController::class, 'updateImage'])
-    ->middleware(['auth', 'role:admin|veterinario|refugio'])
+    ->middleware(['auth', 'role:veterinario|refugio'])
     ->name('adopciones.image.update');
+Route::match(['PUT', 'PATCH'], '/adopciones-form/{id}', [AdoptionsController::class, 'update'])
+    ->middleware(['auth', 'role:veterinario|refugio'])
+    ->name('adopciones.update');
+Route::post('/adopciones-form/{id}/solicitud', [AdoptionsController::class, 'storeRequest'])
+    ->middleware(['auth', 'role:ciudadano'])
+    ->name('adopciones.request.store');
+Route::get('/my/requested-adoptions', [AdoptionsController::class, 'myRequestedAdoptionIds'])
+    ->middleware(['auth', 'role:ciudadano'])
+    ->name('my.requested.adoptions');
 use App\Http\Controllers\Vet\ClinicController;
 use App\Http\Controllers\Vet\ClinicServiceController;
 
@@ -95,24 +107,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Mascotas (dueños)
     // Route::resource('pets', PetController::class); // Eliminado para evitar conflicto con rutas my/pets
 
-    // Adopciones legacy (antes MySQL) -> redirigir al flujo Firebase
-    Route::redirect('/my/adoptions', '/adopciones-form', 302)->name('myadoptions.index');
-    Route::redirect('/my/adoptions/create', '/adopciones-form', 302)->name('myadoptions.create');
-    Route::post('/my/adoptions', function () {
-        return redirect()->route('adopciones.form');
-    })->name('myadoptions.store');
-    Route::patch('/my/adoptions/{post}/toggle', function () {
-        return redirect()->route('adopciones.form');
-    })->name('myadoptions.toggle');
-    Route::redirect('/my/adoptions/{post}/requests', '/adopciones-form', 302)->name('myadoptions.requests');
-
     Route::post('/adoptions/{post}/request', function () {
         return redirect()->route('adopciones.form');
     })->name('adoptions.request.store');
-    Route::redirect('/my/requests', '/adopciones-form', 302)->name('myrequests.index');
-    Route::patch('/requests/{adoptionRequest}/status', function () {
-        return redirect()->route('adopciones.form');
-    })->name('requests.status');
+    Route::get('/my/requests', [AdoptionsController::class, 'myRequests'])
+        ->middleware('role:ciudadano')
+        ->name('my.requests');
+    Route::patch('/my/requests/{requestId}/cancel', [AdoptionsController::class, 'cancelMyRequest'])
+        ->middleware('role:ciudadano')
+        ->name('my.requests.cancel');
+    Route::get('/my/published-requests', [AdoptionsController::class, 'publishedRequests'])
+        ->middleware('role:admin|veterinario|refugio')
+        ->name('my.published.requests');
+    Route::patch('/requests/{requestId}/status', [AdoptionsController::class, 'updateRequestStatus'])
+        ->middleware('role:veterinario|refugio')
+        ->name('requests.status');
 
     // Citas (ciudadano)
     Route::get('/appointments/create/{clinic}/{service}', [AppointmentController::class, 'create'])->name('appointments.create');
@@ -145,6 +154,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('/users/{user}', [UserRoleController::class, 'destroy'])->name('users.destroy');
             Route::post('/users/{user}/restore', [UserRoleController::class, 'restore'])->name('users.restore');
 
+            Route::get('/adoptions', [AdoptionModerationController::class, 'index'])->name('adoptions.index');
+            Route::patch('/adoptions/{adoptionId}/visibility', [AdoptionModerationController::class, 'updateVisibility'])
+                ->name('adoptions.visibility.update');
+
 
 
             // Servicios médicos CRUD
@@ -156,6 +169,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/tickets/{ticket}/reply', [SupportTicketAdminController::class, 'reply'])->name('tickets.reply');
             Route::post('/tickets/{ticket}/close', [SupportTicketAdminController::class, 'close'])->name('tickets.close');
         });
+
+    Route::get('/vet/my-adoptions', [AdoptionsController::class, 'vetMyAdoptions'])
+        ->middleware('role:veterinario|refugio')
+        ->name('vet.my.adoptions');
 
     //Veterinario
     Route::middleware(['role:veterinario'])
@@ -182,6 +199,19 @@ Route::middleware(['role:ciudadano'])->group(function () {
     Route::get('my/pets/{pet}/edit', [PetController::class, 'edit'])->name('my.pets.edit');
     Route::patch('my/pets/{pet}', [PetController::class, 'update'])->name('my.pets.update');
     Route::delete('my/pets/{pet}', [PetController::class, 'destroy'])->name('my.pets.destroy');
+});
+
+// Alias legacy para nombres de ruta en notación con puntos
+Route::middleware(['auth', 'verified', 'role:ciudadano'])->group(function () {
+    Route::redirect('/my/adoptions', '/adopciones-form', 302)->name('my.adoptions');
+    Route::redirect('/my/adoptions/create', '/adopciones-form', 302)->name('my.adoptions.create');
+    Route::post('/my/adoptions', function () {
+        return redirect()->route('adopciones.form');
+    })->name('my.adoptions.store');
+    Route::patch('/my/adoptions/{post}/toggle', function () {
+        return redirect()->route('adopciones.form');
+    })->name('my.adoptions.toggle');
+    Route::redirect('/my/adoptions/{post}/requests', '/adopciones-form', 302)->name('my.adoptions.requests');
 });
 
 require __DIR__.'/auth.php';

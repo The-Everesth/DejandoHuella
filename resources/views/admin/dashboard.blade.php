@@ -14,7 +14,7 @@
         </x-card>
 
         <x-card>
-            <div class="text-sm text-gray-500 font-semibold">Solicitudes pendientes</div>
+            <div class="text-sm text-gray-500 font-semibold">Solicitudes de rol pendientes</div>
             <div class="text-3xl font-extrabold text-yellow-600 mt-2">
                 {{ $pendingUsers ?? '—' }}
             </div>
@@ -56,10 +56,18 @@
         </x-card>
 
         <x-card>
-            <div class="font-bold text-gray-900">Solicitudes</div>
-            <p class="text-gray-600 text-sm mt-1">Aprobar veterinarios y refugios.</p>
+            <div class="font-bold text-gray-900">Gestión de adopciones</div>
+            <p class="text-gray-600 text-sm mt-1">Modera publicaciones creadas por refugios y veterinarias.</p>
+            <div class="mt-3 flex flex-wrap gap-2 text-sm font-semibold">
+                <span class="rounded-full bg-teal-50 px-3 py-1 text-teal-700">
+                    Visibles: {{ $visibleAdoptionsCount ?? '—' }}
+                </span>
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-700">
+                    Ocultas: {{ $hiddenAdoptionsCount ?? '—' }}
+                </span>
+            </div>
             <div class="mt-4">
-                <a href="{{ route('admin.users.pending') }}"><x-button variant="outline">Abrir</x-button></a>
+                <a href="{{ route('admin.adoptions.index') }}"><x-button variant="outline">Abrir</x-button></a>
             </div>
         </x-card>
 
