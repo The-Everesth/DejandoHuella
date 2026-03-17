@@ -60,16 +60,18 @@
                                 <x-dropdown-link :href="route('admin.users.index')">Usuarios</x-dropdown-link>
                                 <x-dropdown-link :href="route('admin.services.index')">Servicios</x-dropdown-link>
                                 <x-dropdown-link :href="route('admin.tickets.index')">Tickets</x-dropdown-link>
-                                <x-dropdown-link :href="route('my.published.requests')">Solicitudes de adopción</x-dropdown-link>
+                                <x-dropdown-link :href="route('admin.adoptions.index')">Gestión de adopciones</x-dropdown-link>
                             @endrole
 
                             @role('veterinario')
+                                <x-dropdown-link :href="route('vet.my.adoptions')">Mis adopciones</x-dropdown-link>
                                 <x-dropdown-link :href="route('vet.clinics.index')">Mis Clínicas</x-dropdown-link>
                                 <x-dropdown-link :href="route('vet.appointments.index')">Citas</x-dropdown-link>
                                 <x-dropdown-link :href="route('my.published.requests')">Solicitudes de adopción</x-dropdown-link>
                             @endrole
 
                             @role('refugio')
+                                <x-dropdown-link :href="route('vet.my.adoptions')">Mis adopciones</x-dropdown-link>
                                 <x-dropdown-link :href="route('my.published.requests')">Solicitudes de adopción</x-dropdown-link>
                             @endrole
                             
@@ -141,11 +143,12 @@
                     <a class="block py-2" href="{{ route('admin.users.index') }}">Usuarios</a>
                     <a class="block py-2" href="{{ route('admin.services.index') }}">Servicios</a>
                     <a class="block py-2" href="{{ route('admin.tickets.index') }}">Tickets</a>
-                    <a class="block py-2" href="{{ route('my.published.requests') }}">Solicitudes de adopción</a>
+                    <a class="block py-2" href="{{ route('admin.adoptions.index') }}">Gestión de adopciones</a>
                 @endrole
 
                 @role('veterinario')
                     <div class="border-t border-white/10 my-2"></div>
+                    <a class="block py-2" href="{{ route('vet.my.adoptions') }}">Mis adopciones</a>
                     <a class="block py-2" href="{{ route('vet.clinics.index') }}">Mis Clínicas</a>
                     <a class="block py-2" href="{{ route('vet.appointments.index') }}">Citas</a>
                     <a class="block py-2" href="{{ route('my.published.requests') }}">Solicitudes de adopción</a>
@@ -153,6 +156,7 @@
 
                 @role('refugio')
                     <div class="border-t border-white/10 my-2"></div>
+                    <a class="block py-2" href="{{ route('vet.my.adoptions') }}">Mis adopciones</a>
                     <a class="block py-2" href="{{ route('my.published.requests') }}">Solicitudes de adopción</a>
                 @endrole
 

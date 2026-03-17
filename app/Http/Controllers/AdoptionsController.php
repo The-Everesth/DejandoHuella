@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\User;
 use App\Services\Firestore\AdoptionsFirestoreService;
 use App\Services\Firestore\AdoptionRequestsFirestoreService;
 use Illuminate\Support\Str;
@@ -11,6 +12,8 @@ class AdoptionsController extends Controller
 {
     protected $firebase;
     protected $adoptionRequests;
+    protected array $allowedPublisherCache = [];
+    protected ?array $citizenVisibleAdoptionLookup = null;
 
     public function __construct(AdoptionsFirestoreService $firebase, AdoptionRequestsFirestoreService $adoptionRequests)
     {
@@ -33,10 +36,147 @@ class AdoptionsController extends Controller
             abort(403, 'Solo usuarios con rol ciudadano pueden ver sus solicitudes.');
         }
 
-        $requests = collect($this->adoptionRequests->listByApplicant((int) $user->id))->values();
+        $visibleAdoptions = $this->getCitizenVisibleAdoptionLookup();
+
+        $requests = collect($this->adoptionRequests->listByApplicant((int) $user->id))
+            ->filter(function (array $item) use ($visibleAdoptions): bool {
+                $adoptionId = trim((string) ($item['adoptionId'] ?? ''));
+
+                return $adoptionId !== '' && isset($visibleAdoptions[$adoptionId]);
+            })
+            ->values();
 
         return view('adoptions.my-requests', [
             'requests' => $requests,
+        ]);
+    }
+
+    /**
+     * Devolver IDs de adopciones que ya fueron solicitadas por el ciudadano autenticado.
+     */
+    public function myRequestedAdoptionIds()
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes iniciar sesión.',
+            ], 401);
+        }
+
+        if (! $user->hasRole('ciudadano')) {
+            abort(403, 'Solo usuarios con rol ciudadano pueden consultar sus solicitudes.');
+        }
+
+        $visibleAdoptions = $this->getCitizenVisibleAdoptionLookup();
+
+        $adoptionIds = collect($this->adoptionRequests->listByApplicant((int) $user->id))
+            ->filter(static function (array $item): bool {
+                $status = strtolower(trim((string) ($item['status'] ?? 'pendiente')));
+                return ! in_array($status, ['cancelada', 'cancelled', 'canceled'], true);
+            })
+            ->map(static function (array $item): string {
+                return trim((string) ($item['adoptionId'] ?? ''));
+            })
+            ->filter(function (string $adoptionId) use ($visibleAdoptions): bool {
+                return $adoptionId !== '' && isset($visibleAdoptions[$adoptionId]);
+            })
+            ->unique()
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $adoptionIds,
+        ]);
+    }
+
+    /**
+     * Permitir al ciudadano cancelar una solicitud propia de adopcion.
+     */
+    public function cancelMyRequest(string $requestId)
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        if (! $user->hasRole('ciudadano')) {
+            abort(403, 'Solo usuarios con rol ciudadano pueden cancelar sus solicitudes.');
+        }
+
+        $solicitud = $this->adoptionRequests->get($requestId);
+        if (! is_array($solicitud)) {
+            return back()->with('error', 'La solicitud no fue encontrada.');
+        }
+
+        $applicantId = (int) ($solicitud['applicantId'] ?? 0);
+        if ($applicantId !== (int) $user->id) {
+            abort(403, 'No tienes permisos para cancelar esta solicitud.');
+        }
+
+        $currentStatus = strtolower(trim((string) ($solicitud['status'] ?? 'pendiente')));
+        $isApproved = in_array($currentStatus, ['aprobada', 'approved'], true);
+        $isRejected = in_array($currentStatus, ['rechazada', 'rejected'], true);
+        $isCancelled = in_array($currentStatus, ['cancelada', 'cancelled', 'canceled'], true);
+
+        if ($isCancelled) {
+            return back()->with('success', 'La solicitud ya estaba cancelada.');
+        }
+
+        if ($isApproved || $isRejected) {
+            return back()->with('error', 'Solo puedes cancelar solicitudes pendientes.');
+        }
+
+        $updated = $this->adoptionRequests->setStatus($requestId, 'cancelada', [
+            'cancelledAt' => now()->toIso8601String(),
+            'cancelledBy' => (int) $user->id,
+        ]);
+
+        if (! $updated) {
+            return back()->with('error', 'No se pudo cancelar la solicitud. Intenta de nuevo.');
+        }
+
+        return back()->with('success', 'Solicitud cancelada correctamente.');
+    }
+
+    /**
+     * Mostrar las adopciones publicadas por el usuario autenticado.
+     */
+    public function vetMyAdoptions()
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        if (! $user->hasAnyRole('veterinario', 'refugio')) {
+            abort(403, 'Solo usuarios con rol veterinario o refugio pueden ver sus adopciones.');
+        }
+
+        $myAdoptions = [];
+        foreach ($this->firebase->list() as $docId => $adoption) {
+            if ((int) ($adoption['createdBy'] ?? 0) !== (int) $user->id) {
+                continue;
+            }
+
+            $adoptionId = (string) ($adoption['id'] ?? $adoption['_docId'] ?? $docId);
+            if ($adoptionId === '') {
+                continue;
+            }
+
+            $adoption['id'] = $adoptionId;
+            $myAdoptions[] = $adoption;
+        }
+
+        usort($myAdoptions, static function (array $a, array $b): int {
+            return strcmp((string) ($b['fecha'] ?? ''), (string) ($a['fecha'] ?? ''));
+        });
+
+        return view('adoptions.my-adoptions', [
+            'adoptions' => $myAdoptions,
         ]);
     }
 
@@ -51,14 +191,19 @@ class AdoptionsController extends Controller
             return redirect()->route('login');
         }
 
-        if (! $user->hasAnyRole('admin', 'veterinario', 'refugio')) {
-            abort(403, 'Solo usuarios admin, veterinario o refugio pueden ver solicitudes recibidas.');
+        // Compatibilidad legacy: si admin entra por la ruta vieja,
+        // lo enviamos al nuevo módulo de moderación de publicaciones.
+        if ($user->hasRole('admin')) {
+            return redirect()->route('admin.adoptions.index');
         }
 
-        $isAdmin = $user->hasRole('admin');
+        if (! $user->hasAnyRole('veterinario', 'refugio')) {
+            abort(403, 'Solo usuarios con rol veterinario o refugio pueden ver solicitudes recibidas.');
+        }
+
         $ownedAdoptions = [];
         foreach ($this->firebase->list() as $docId => $adoption) {
-            if (! $isAdmin && (int) ($adoption['createdBy'] ?? 0) !== (int) $user->id) {
+            if ((int) ($adoption['createdBy'] ?? 0) !== (int) $user->id) {
                 continue;
             }
 
@@ -80,6 +225,14 @@ class AdoptionsController extends Controller
                     $item['petName'] = (string) $adoption['nombreAnimal'];
                 }
 
+                if (empty($item['petType']) && ! empty($adoption['tipoAnimal'])) {
+                    $item['petType'] = (string) $adoption['tipoAnimal'];
+                }
+
+                if (empty($item['petSex']) && ! empty($adoption['sexo'])) {
+                    $item['petSex'] = (string) $adoption['sexo'];
+                }
+
                 return $item;
             })
             ->values();
@@ -94,6 +247,11 @@ class AdoptionsController extends Controller
      */
     public function updateRequestStatus(Request $request, string $requestId)
     {
+        $user = auth()->user();
+        if ($user && $user->hasRole('admin')) {
+            abort(403, 'El rol admin solo puede visualizar el estado de las solicitudes.');
+        }
+
         $validated = $request->validate([
             'status' => 'required|string|in:aprobada,rechazada',
         ]);
@@ -101,6 +259,11 @@ class AdoptionsController extends Controller
         $solicitud = $this->adoptionRequests->get($requestId);
         if (! is_array($solicitud)) {
             return back()->with('error', 'La solicitud no fue encontrada.');
+        }
+
+        $currentStatus = strtolower(trim((string) ($solicitud['status'] ?? 'pendiente')));
+        if (in_array($currentStatus, ['cancelada', 'cancelled', 'canceled'], true)) {
+            return back()->with('error', 'No se puede gestionar una solicitud cancelada por el ciudadano.');
         }
 
         $adoptionId = (string) ($solicitud['adoptionId'] ?? '');
@@ -117,8 +280,6 @@ class AdoptionsController extends Controller
             abort(403, 'No tienes permisos para cambiar el estado de esta solicitud.');
         }
 
-        $user = auth()->user();
-
         $this->adoptionRequests->setStatus($requestId, (string) $validated['status'], [
             'reviewedAt' => now()->toIso8601String(),
             'reviewedBy' => $user ? (int) $user->id : null,
@@ -134,9 +295,15 @@ class AdoptionsController extends Controller
      */
     public function store(Request $request)
     {
+        $roleError = $this->ensurePublisherRole();
+        if ($roleError) {
+            return $roleError;
+        }
+
         $validated = $request->validate([
             'nombreAnimal' => 'required|string|max:255',
             'tipoAnimal' => 'required|string|max:100',
+            'sexo' => 'required|string|in:hembra,macho',
             'edad' => 'required|integer|min:0|max:50',
             'raza' => 'required|string|max:255',
             'detalles' => 'nullable|string|max:1000',
@@ -184,7 +351,13 @@ class AdoptionsController extends Controller
     public function index()
     {
         try {
-            $adopciones = $this->firebase->list();
+            $adopciones = array_filter(
+                $this->firebase->list(),
+                function (array $adopcion): bool {
+                    return ! $this->isAdoptionHidden($adopcion)
+                        && $this->isAllowedPublisher($adopcion);
+                }
+            );
 
             return response()->json([
                 'success' => true,
@@ -207,7 +380,9 @@ class AdoptionsController extends Controller
         try {
             $adopcion = $this->firebase->get($id);
 
-            if ($adopcion === null) {
+            if ($adopcion === null
+                || $this->isAdoptionHidden($adopcion)
+                || ! $this->isAllowedPublisher($adopcion)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Adopción no encontrada'
@@ -232,9 +407,15 @@ class AdoptionsController extends Controller
      */
     public function storeToFirebase(Request $request)
     {
+        $roleError = $this->ensurePublisherRole();
+        if ($roleError) {
+            return $roleError;
+        }
+
         $validated = $request->validate([
             'nombreAnimal' => 'required|string|max:255',
             'tipoAnimal' => 'required|string|max:100',
+            'sexo' => 'required|string|in:hembra,macho',
             'edad' => 'required|integer|min:0|max:50',
             'raza' => 'required|string|max:255',
             'detalles' => 'nullable|string|max:1000',
@@ -282,13 +463,20 @@ class AdoptionsController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        $roleError = $this->ensurePublisherRole();
+        if ($roleError) {
+            return $roleError;
+        }
+
         $validated = $request->validate([
             'nombreAnimal' => 'sometimes|string|max:255',
             'tipoAnimal' => 'sometimes|string|max:100',
+            'sexo' => 'sometimes|string|in:hembra,macho',
             'edad' => 'sometimes|integer|min:0|max:50',
             'raza' => 'sometimes|string|max:255',
             'detalles' => 'nullable|string|max:1000',
             'estado' => 'sometimes|string|max:50',
+            'fotoMascota' => 'nullable|image|max:4096',
         ]);
 
         try {
@@ -304,6 +492,33 @@ class AdoptionsController extends Controller
             if ($authorizationError) {
                 return $authorizationError;
             }
+
+            // Si viene una nueva foto en el formulario de edición, la reemplazamos
+            // y actualizamos también las rutas persistidas en Firebase.
+            if ($request->hasFile('fotoMascota')) {
+                $upload = $request->file('fotoMascota');
+                if ($upload && $upload->isValid()) {
+                    $directory = public_path('uploads/adoptions');
+                    if (! is_dir($directory)) {
+                        mkdir($directory, 0755, true);
+                    }
+
+                    $filename = Str::uuid()->toString().'.'.$upload->getClientOriginalExtension();
+                    $upload->move($directory, $filename);
+
+                    if (! empty($adopcion['imagePath'])) {
+                        $oldImagePath = public_path((string) $adopcion['imagePath']);
+                        if (is_file($oldImagePath)) {
+                            @unlink($oldImagePath);
+                        }
+                    }
+
+                    $validated['imagePath'] = 'uploads/adoptions/'.$filename;
+                    $validated['imageUrl'] = url('uploads/adoptions/'.$filename);
+                }
+            }
+
+            unset($validated['fotoMascota']);
 
             $updated = $this->firebase->update($id, $validated);
             if (! $updated) {
@@ -333,6 +548,11 @@ class AdoptionsController extends Controller
      */
     public function destroy(string $id)
     {
+        $roleError = $this->ensurePublisherRole();
+        if ($roleError) {
+            return $roleError;
+        }
+
         try {
             $adoption = $this->firebase->get($id);
 
@@ -381,6 +601,11 @@ class AdoptionsController extends Controller
      */
     public function updateImage(Request $request, string $id)
     {
+        $roleError = $this->ensurePublisherRole();
+        if ($roleError) {
+            return $roleError;
+        }
+
         $request->validate([
             'fotoMascota' => 'required|image|max:4096',
         ]);
@@ -513,6 +738,20 @@ class AdoptionsController extends Controller
                 ], 404);
             }
 
+            if ($this->isAdoptionHidden($adopcion)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mascota no encontrada'
+                ], 404);
+            }
+
+            if (! $this->isAllowedPublisher($adopcion)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mascota no encontrada'
+                ], 404);
+            }
+
             if (isset($adopcion['createdBy']) && (int) $adopcion['createdBy'] === (int) $user->id) {
                 return response()->json([
                     'success' => false,
@@ -569,7 +808,31 @@ class AdoptionsController extends Controller
     }
 
     /**
-     * Solo el publicador de la mascota o un admin puede modificar la publicación.
+     * Solo usuarios con rol veterinario o refugio pueden gestionar publicaciones.
+     */
+    protected function ensurePublisherRole()
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes iniciar sesión para gestionar publicaciones de adopción'
+            ], 401);
+        }
+
+        if (! $user->hasAnyRole('veterinario', 'refugio')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo usuarios con rol veterinario o refugio pueden publicar y gestionar adopciones'
+            ], 403);
+        }
+
+        return null;
+    }
+
+    /**
+     * Solo el publicador de la mascota puede modificar la publicación.
      */
     protected function forbidIfCannotManageAdoption(array $adoption)
     {
@@ -599,12 +862,76 @@ class AdoptionsController extends Controller
             return false;
         }
 
-        if ($user->hasRole('admin')) {
-            return true;
+        if (! $user->hasAnyRole('veterinario', 'refugio')) {
+            return false;
         }
 
         $ownerId = (int) ($adoption['createdBy'] ?? 0);
 
         return $ownerId === (int) $user->id;
+    }
+
+    protected function isAdoptionHidden(array $adoption): bool
+    {
+        $value = $adoption['isHidden'] ?? false;
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (bool) $value;
+        }
+
+        $normalized = strtolower(trim((string) $value));
+
+        return in_array($normalized, ['1', 'true', 'yes', 'si', 'sí'], true);
+    }
+
+    protected function isAllowedPublisher(array $adoption): bool
+    {
+        $publisherId = (int) ($adoption['createdBy'] ?? 0);
+        if ($publisherId <= 0) {
+            return false;
+        }
+
+        if (array_key_exists($publisherId, $this->allowedPublisherCache)) {
+            return $this->allowedPublisherCache[$publisherId];
+        }
+
+        $publisher = User::withTrashed()->find($publisherId);
+        $isAllowed = $publisher
+            ? $publisher->hasAnyRole('veterinario', 'refugio')
+            : false;
+
+        $this->allowedPublisherCache[$publisherId] = $isAllowed;
+
+        return $isAllowed;
+    }
+
+    protected function getCitizenVisibleAdoptionLookup(): array
+    {
+        if (is_array($this->citizenVisibleAdoptionLookup)) {
+            return $this->citizenVisibleAdoptionLookup;
+        }
+
+        $lookup = [];
+
+        foreach ($this->firebase->list() as $docId => $adoption) {
+            $adoptionId = trim((string) ($adoption['id'] ?? $adoption['_docId'] ?? $docId));
+            if ($adoptionId === '') {
+                continue;
+            }
+
+            if ($this->isAdoptionHidden($adoption) || ! $this->isAllowedPublisher($adoption)) {
+                continue;
+            }
+
+            $lookup[$adoptionId] = true;
+        }
+
+        $this->citizenVisibleAdoptionLookup = $lookup;
+
+        return $this->citizenVisibleAdoptionLookup;
     }
 }

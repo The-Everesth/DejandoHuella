@@ -1,14 +1,13 @@
 <x-app-layout>
-    @php($canRegisterAdoption = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
-    @php($canManageAdoptionImage = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
-    @php($canDeleteAdoption = auth()->check() && auth()->user()->hasAnyRole(['admin', 'veterinario', 'refugio']))
+    @php($canRegisterAdoption = false)
+    @php($canDeleteAdoption = false)
     @php($canRequestAdoption = auth()->check() && auth()->user()->hasRole('ciudadano'))
     @php($canManageAllAdoptions = auth()->check() && auth()->user()->hasRole('admin'))
     @php($currentUserId = auth()->id())
 
     <x-slot name="header">
         <h1 class="text-3xl font-bold text-gray-900">Adopción de Mascotas</h1>
-        <p class="text-gray-600 mt-2">Registra una mascota disponible para adopción</p>
+        <p class="text-gray-600 mt-2">Explora mascotas disponibles y encuentra a tu próximo compañero.</p>
     </x-slot>
 
                 <!-- Alert -->
@@ -54,6 +53,22 @@
                                         <option value="Conejo">Conejo</option>
                                         <option value="Ave">Ave</option>
                                         <option value="Otro">Otro</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="sexo" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Sexo <span class="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        id="sexo"
+                                        name="sexo"
+                                        required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-700 focus:border-transparent"
+                                    >
+                                        <option value="">Selecciona una opción...</option>
+                                        <option value="hembra">Hembra</option>
+                                        <option value="macho">Macho</option>
                                     </select>
                                 </div>
 
@@ -130,8 +145,8 @@
                             <div class="mb-6 pb-4 border-b border-slate-200">
                                 <h2 class="text-2xl font-bold text-gray-900">Adopciones registradas</h2>
                             </div>
-                            <div id="adopcionList" class="space-y-4 max-h-96 overflow-y-auto pr-2">
-                                <div class="text-center py-12">
+                            <div id="adopcionList" class="grid grid-cols-1 gap-4 md:grid-cols-2 max-h-[34rem] overflow-y-auto pr-2">
+                                <div class="col-span-full text-center py-12">
                                     <div class="animate-pulse">
                                         <p class="text-gray-500 text-lg">Cargando adopciones...</p>
                                     </div>
@@ -149,6 +164,121 @@
                         <img id="imagePreviewModalImg" src="" alt="Vista previa" class="max-h-[80vh] w-full rounded-xl object-contain">
                     </div>
                 </div>
+
+                @if($canRegisterAdoption)
+                <div id="editAdoptionModal" class="fixed inset-0 z-[55] hidden items-center justify-center bg-gray-900/70 p-3 sm:p-4">
+                    <div class="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-xl">
+                        <div class="flex items-start justify-between border-b border-slate-200 px-6 pb-4 pt-6">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900">Editar mascota registrada</h3>
+                                <p class="mt-1 text-sm text-gray-600">Actualiza los datos de la mascota y guarda los cambios.</p>
+                            </div>
+                            <button id="closeEditAdoptionModal" type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200" aria-label="Cerrar edición">✕</button>
+                        </div>
+
+                        <form id="editAdoptionForm" class="space-y-4 px-6 pb-5 pt-4">
+                            <input type="hidden" id="editAdoptionId" name="adoptionId">
+
+                            <div>
+                                <label for="editNombreAnimal" class="mb-1 block text-sm font-medium text-gray-700">Nombre del animal <span class="text-red-500">*</span></label>
+                                <input
+                                    type="text"
+                                    id="editNombreAnimal"
+                                    name="nombreAnimal"
+                                    maxlength="255"
+                                    required
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                >
+                            </div>
+
+                            <div>
+                                <label for="editTipoAnimal" class="mb-1 block text-sm font-medium text-gray-700">Tipo de animal <span class="text-red-500">*</span></label>
+                                <select
+                                    id="editTipoAnimal"
+                                    name="tipoAnimal"
+                                    required
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                >
+                                    <option value="">Selecciona un tipo...</option>
+                                    <option value="Perro">Perro</option>
+                                    <option value="Gato">Gato</option>
+                                    <option value="Conejo">Conejo</option>
+                                    <option value="Ave">Ave</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="editSexo" class="mb-1 block text-sm font-medium text-gray-700">Sexo <span class="text-red-500">*</span></label>
+                                <select
+                                    id="editSexo"
+                                    name="sexo"
+                                    required
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                >
+                                    <option value="">Selecciona una opción...</option>
+                                    <option value="hembra">Hembra</option>
+                                    <option value="macho">Macho</option>
+                                </select>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label for="editEdad" class="mb-1 block text-sm font-medium text-gray-700">Edad (años) <span class="text-red-500">*</span></label>
+                                    <input
+                                        type="number"
+                                        id="editEdad"
+                                        name="edad"
+                                        min="0"
+                                        max="50"
+                                        required
+                                        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                    >
+                                </div>
+
+                                <div>
+                                    <label for="editRaza" class="mb-1 block text-sm font-medium text-gray-700">Raza <span class="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        id="editRaza"
+                                        name="raza"
+                                        maxlength="255"
+                                        required
+                                        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                    >
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="editDetalles" class="mb-1 block text-sm font-medium text-gray-700">Detalles</label>
+                                <textarea
+                                    id="editDetalles"
+                                    name="detalles"
+                                    rows="4"
+                                    maxlength="1000"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                ></textarea>
+                            </div>
+
+                            <div>
+                                <label for="editFotoMascota" class="mb-1 block text-sm font-medium text-gray-700">Nueva foto (opcional)</label>
+                                <input
+                                    type="file"
+                                    id="editFotoMascota"
+                                    name="fotoMascota"
+                                    accept="image/*"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-700"
+                                >
+                            </div>
+
+                            <div class="flex justify-end gap-2 border-t border-slate-200 pt-4">
+                                <button type="button" id="cancelEditAdoptionModal" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancelar</button>
+                                <button type="submit" id="editAdoptionSubmitBtn" class="rounded-full bg-[#F5E7DA] px-4 py-2 text-sm font-bold text-black hover:opacity-90">Guardar cambios</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                @endif
 
                 @if($canRequestAdoption)
                 <div id="adoptionRequestModal" class="fixed inset-0 z-50 hidden items-stretch justify-center bg-gray-900/70 p-3 sm:p-4">
@@ -412,16 +542,18 @@
         const API_URL = '/api/adoptions';
         const STORE_URL = @json(route('adopciones.store'));
         const DELETE_URL_TEMPLATE = @json(route('adopciones.destroy', ['id' => '__ID__']));
-        const UPDATE_IMAGE_URL_TEMPLATE = @json(route('adopciones.image.update', ['id' => '__ID__']));
         const REQUEST_URL_TEMPLATE = @json(route('adopciones.request.store', ['id' => '__ID__']));
+        const MY_REQUESTED_ADOPTIONS_URL = @json(route('my.requested.adoptions'));
+        const UPDATE_ADOPTION_URL_TEMPLATE = @json(route('adopciones.update', ['id' => '__ID__']));
         const IS_AUTHENTICATED = @json(auth()->check());
         const IS_REFUGIO = @json(auth()->check() && auth()->user()->hasRole('refugio'));
         const CURRENT_USER_ID = @json($currentUserId);
         const CAN_MANAGE_ALL_ADOPTIONS = @json($canManageAllAdoptions);
-        const CAN_MANAGE_ADOPTION_IMAGE = @json($canManageAdoptionImage);
         const CAN_DELETE_ADOPTION = @json($canDeleteAdoption);
         const CAN_REGISTER_ADOPTION = @json($canRegisterAdoption);
         const CAN_REQUEST_ADOPTION = @json($canRequestAdoption);
+        let requestedAdoptionIds = new Set();
+        let requestedAdoptionIdsLoaded = false;
         const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         const IMAGE_PREVIEW_MODAL = document.getElementById('imagePreviewModal');
         const IMAGE_PREVIEW_MODAL_IMG = document.getElementById('imagePreviewModalImg');
@@ -439,6 +571,12 @@
         const ADOPTION_REQUEST_CONFIRMATION = document.getElementById('solicitudConfirmacion');
         const ADOPTION_REQUEST_SUBMIT_BTN = document.getElementById('adoptionRequestSubmitBtn');
         const ADOPTION_REQUEST_SUCCESS_TEXT = 'Hemos recibido tu solicitud y estamos revisando tu información. Nos pondremos en contacto contigo pronto para continuar con el proceso de adopción. ¡Gracias por elegir darle un hogar amoroso a una de nuestras mascotas!';
+        const EDIT_ADOPTION_MODAL = document.getElementById('editAdoptionModal');
+        const CLOSE_EDIT_ADOPTION_MODAL = document.getElementById('closeEditAdoptionModal');
+        const CANCEL_EDIT_ADOPTION_MODAL = document.getElementById('cancelEditAdoptionModal');
+        const EDIT_ADOPTION_FORM = document.getElementById('editAdoptionForm');
+        const EDIT_ADOPTION_ID = document.getElementById('editAdoptionId');
+        const EDIT_ADOPTION_SUBMIT_BTN = document.getElementById('editAdoptionSubmitBtn');
 
         function openImagePreview(imageUrl, imageAlt = 'Vista previa') {
             if (!IMAGE_PREVIEW_MODAL || !IMAGE_PREVIEW_MODAL_IMG || !imageUrl) {
@@ -595,11 +733,123 @@
             });
         }
 
+        function normalizeText(value, fallback = '') {
+            const text = String(value ?? '').trim();
+            return text === '' ? fallback : text;
+        }
+
+        async function loadRequestedAdoptionIds(forceReload = false) {
+            if (!CAN_REQUEST_ADOPTION) {
+                requestedAdoptionIds = new Set();
+                requestedAdoptionIdsLoaded = true;
+                return;
+            }
+
+            if (!forceReload && requestedAdoptionIdsLoaded) {
+                return;
+            }
+
+            try {
+                const response = await fetch(MY_REQUESTED_ADOPTIONS_URL, {
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                });
+
+                const result = await response.json().catch(() => ({}));
+                const ids = response.ok && Array.isArray(result?.data) ? result.data : [];
+
+                requestedAdoptionIds = new Set(
+                    ids
+                        .map((id) => normalizeText(id, ''))
+                        .filter((id) => id !== '')
+                );
+            } catch (error) {
+                console.error('No se pudieron cargar las solicitudes existentes del ciudadano:', error);
+                requestedAdoptionIds = new Set();
+            } finally {
+                requestedAdoptionIdsLoaded = true;
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeAttr(value) {
+            return escapeHtml(value);
+        }
+
+        function bindAdoptionImageFallbackHandlers(scopeElement) {
+            if (!scopeElement) {
+                return;
+            }
+
+            scopeElement.querySelectorAll('.adoption-card-image').forEach((img) => {
+                if (img.dataset.errorBound === '1') {
+                    return;
+                }
+
+                img.dataset.errorBound = '1';
+                img.addEventListener('error', () => {
+                    const panel = img.closest('.adoption-image-panel');
+                    if (!panel) {
+                        return;
+                    }
+
+                    panel.className = 'adoption-image-panel flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-teal-200 bg-teal-100/60';
+                    panel.style.width = 'clamp(5.5rem, 16vw, 7rem)';
+                    panel.style.height = 'clamp(5.5rem, 16vw, 7rem)';
+                    panel.innerHTML = '<p class="px-2 text-center text-xs font-medium text-teal-800">Sin foto</p>';
+                });
+            });
+        }
+
+        function openEditAdoptionModal(adopcion) {
+            if (!EDIT_ADOPTION_MODAL || !EDIT_ADOPTION_FORM || !EDIT_ADOPTION_ID) {
+                return;
+            }
+
+            EDIT_ADOPTION_FORM.reset();
+            EDIT_ADOPTION_ID.value = adopcion.id || '';
+            document.getElementById('editNombreAnimal').value = adopcion.nombre || '';
+            document.getElementById('editTipoAnimal').value = adopcion.tipo || '';
+            document.getElementById('editSexo').value = adopcion.sexo || '';
+            document.getElementById('editEdad').value = adopcion.edad || '';
+            document.getElementById('editRaza').value = adopcion.raza || '';
+            document.getElementById('editDetalles').value = adopcion.detalles || '';
+
+            EDIT_ADOPTION_MODAL.classList.remove('hidden');
+            EDIT_ADOPTION_MODAL.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeEditAdoptionModal() {
+            if (!EDIT_ADOPTION_MODAL || !EDIT_ADOPTION_FORM || !EDIT_ADOPTION_ID) {
+                return;
+            }
+
+            EDIT_ADOPTION_MODAL.classList.add('hidden');
+            EDIT_ADOPTION_MODAL.classList.remove('flex');
+            EDIT_ADOPTION_FORM.reset();
+            EDIT_ADOPTION_ID.value = '';
+            document.body.classList.remove('overflow-hidden');
+        }
+
         // Función para cargar adopciones desde la API
         async function loadAdopciones() {
             const adopcionList = document.getElementById('adopcionList');
             
             try {
+                if (CAN_REQUEST_ADOPTION && !requestedAdoptionIdsLoaded) {
+                    await loadRequestedAdoptionIds();
+                }
+
                 const response = await fetch(API_URL);
                 const result = await response.json();
 
@@ -620,84 +870,116 @@
                     adopcionesArray.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
                     if (adopcionesArray.length === 0) {
-                        adopcionList.innerHTML = '<div class="text-center py-12"><p class="text-gray-500 text-lg">No hay adopciones registradas aún</p><p class="text-gray-400 text-sm mt-2">¡Sé el primero en registrar una mascota!</p></div>';
+                        adopcionList.innerHTML = '<div class="col-span-full text-center py-12"><p class="text-gray-500 text-lg">No hay adopciones registradas aún</p><p class="text-gray-400 text-sm mt-2">¡Sé el primero en registrar una mascota!</p></div>';
                         return;
                     }
 
                     adopcionesArray.forEach((adopcion) => {
-                        const adoptionId = adopcion.id || adopcion._docId || '';
-                        const fecha = new Date(adopcion.fecha).toLocaleDateString('es-ES');
+                        const rawAdoptionId = normalizeText(adopcion.id || adopcion._docId, '');
+                        const adoptionId = escapeAttr(rawAdoptionId);
+                        const parsedDate = new Date(adopcion.fecha);
+                        const fecha = Number.isNaN(parsedDate.getTime()) ? 'fecha no disponible' : parsedDate.toLocaleDateString('es-ES');
                         const ownerId = Number(adopcion.createdBy || 0);
                         const isOwner = CURRENT_USER_ID !== null && Number(CURRENT_USER_ID) === ownerId;
                         const canModifyThisAdoption = CAN_MANAGE_ALL_ADOPTIONS || isOwner;
-                        const canDelete = Boolean(adoptionId) && CAN_DELETE_ADOPTION && canModifyThisAdoption;
-                        const canChangeImage = Boolean(adoptionId) && CAN_MANAGE_ADOPTION_IMAGE && canModifyThisAdoption;
-                        const showManagementControls = canDelete || canChangeImage;
+                        const canEditAction = Boolean(CAN_REGISTER_ADOPTION && canModifyThisAdoption && rawAdoptionId);
+                        const hasExistingRequest = CAN_REQUEST_ADOPTION && rawAdoptionId !== '' && requestedAdoptionIds.has(rawAdoptionId);
+                        const canRequestAction = Boolean(!CAN_REGISTER_ADOPTION && CAN_REQUEST_ADOPTION && rawAdoptionId && !hasExistingRequest);
+                        const hasActionButton = canEditAction || canRequestAction;
+                        const nombreAnimalRaw = normalizeText(adopcion.nombreAnimal, 'Mascota sin nombre');
+                        const tipoAnimalRaw = normalizeText(adopcion.tipoAnimal, 'Tipo no especificado');
+                        const sexoRaw = String(adopcion.sexo ?? '').trim().toLowerCase();
+                        const sexoValue = sexoRaw === 'hembra' || sexoRaw === 'macho' ? sexoRaw : '';
+                        const sexoLabel = sexoValue === 'hembra' ? 'Hembra' : (sexoValue === 'macho' ? 'Macho' : 'No especificado');
+                        const razaRaw = normalizeText(adopcion.raza, 'No especificada');
+                        const detallesRaw = normalizeText(adopcion.detalles, '');
+                        const imageUrlRaw = normalizeText(adopcion.imageUrl, '');
+                        const edadNumero = Number(adopcion.edad);
+                        const edad = Number.isFinite(edadNumero) && edadNumero >= 0 ? edadNumero : null;
+                        const edadTexto = edad === null ? 'N/D' : String(edad);
+                        const edadUnidad = edad === null ? '' : (edad === 1 ? ' año' : ' años');
+                        const nombreAnimal = escapeHtml(nombreAnimalRaw);
+                        const tipoAnimal = escapeHtml(tipoAnimalRaw);
+                        const sexo = escapeHtml(sexoLabel);
+                        const raza = escapeHtml(razaRaw);
+                        const detalles = escapeHtml(detallesRaw);
+                        const imageUrl = escapeAttr(imageUrlRaw);
+                        const imageAlt = escapeAttr(`Foto de ${nombreAnimalRaw}`);
+                        const imagePanelSizeStyle = 'width: clamp(5.5rem, 16vw, 7rem); height: clamp(5.5rem, 16vw, 7rem);';
+                        const imagePanel = imageUrlRaw
+                            ? `<div class="adoption-image-panel shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-slate-100" style="${imagePanelSizeStyle}">
+                                    <img src="${imageUrl}" alt="${imageAlt}" class="preview-image adoption-card-image block h-full w-full cursor-zoom-in transition duration-300 group-hover:scale-[1.01]" style="display:block;width:100%;height:100%;object-fit:contain;object-position:center;padding:0.25rem;" data-full-image="${imageUrl}" data-image-alt="${imageAlt}" loading="lazy">
+                                </div>`
+                            : `<div class="adoption-image-panel flex shrink-0 items-center justify-center rounded-xl border border-dashed border-teal-200 bg-teal-100/60" style="${imagePanelSizeStyle}">
+                                    <p class="px-2 text-center text-xs font-medium text-teal-800">Sin foto</p>
+                                </div>`;
+
                         const html = `
-                            <div class="group p-4 rounded-2xl border bg-teal-50 hover:shadow-md transition-all duration-200 cursor-pointer">
-                                <div class="flex items-start justify-between mb-3">
-                                    <div>
-                                        <h3 class="text-lg font-extrabold text-gray-900">${adopcion.nombreAnimal}</h3>
-                                        <p class="text-sm text-gray-600">${adopcion.tipoAnimal}</p>
-                                    </div>
-                                    ${showManagementControls ? `<div class="flex items-center gap-2">
-                                        ${canChangeImage ? `<button
-                                            type="button"
-                                            class="change-image inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold border border-blue-200 bg-white text-blue-700 hover:bg-blue-50 transition"
-                                            data-id="${adoptionId}"
-                                        >
-                                            Cambiar foto
-                                        </button>` : ''}
-                                        ${canDelete ? `<button
-                                            type="button"
-                                            class="delete-adopcion inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold border border-red-200 bg-white text-red-700 hover:bg-red-50 transition"
-                                            data-id="${adoptionId}"
-                                        >
-                                            Eliminar
-                                        </button>` : ''}
-                                    </div>` : ''}
+                            <div class="group flex h-full flex-col rounded-2xl border border-teal-100 bg-teal-50 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                                <div class="mb-3">
+                                    <h3 class="text-xl font-extrabold leading-tight text-gray-900">${nombreAnimal}</h3>
+                                    <p class="mt-1 text-sm font-medium text-gray-600">${tipoAnimal}</p>
                                 </div>
-                                <div class="mb-3 flex items-start gap-4">
-                                    <div class="flex-1 min-w-0">
-                                        <div class="grid grid-cols-2 gap-3 mb-3">
-                                            <div>
-                                                <span class="text-sm text-gray-700"><strong>Edad:</strong> ${adopcion.edad} año${adopcion.edad != 1 ? 's' : ''}</span>
+                                <div class="mb-3 flex flex-1 items-start gap-4">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div class="rounded-lg border border-teal-100 bg-white px-3 py-2">
+                                                <span class="text-sm text-gray-700"><strong>Edad:</strong> ${edadTexto}${edadUnidad}</span>
                                             </div>
-                                            <div>
-                                                <span class="text-sm text-gray-700"><strong>Raza:</strong> ${adopcion.raza}</span>
+                                            <div class="rounded-lg border border-teal-100 bg-white px-3 py-2">
+                                                <span class="text-sm text-gray-700"><strong>Raza:</strong> ${raza}</span>
+                                            </div>
+                                            <div class="rounded-lg border border-teal-100 bg-white px-3 py-2 col-span-2 sm:col-span-1">
+                                                <span class="text-sm text-gray-700"><strong>Sexo:</strong> ${sexo}</span>
                                             </div>
                                         </div>
-                                        ${adopcion.detalles ? `<div class="bg-white rounded-lg p-3 border">
-                                            <p class="text-sm text-gray-600"><strong class="text-gray-900">Detalles:</strong> ${adopcion.detalles}</p>
+                                        ${detalles ? `<div class="mt-3 rounded-lg border border-teal-100 bg-white p-3">
+                                            <p class="text-sm text-gray-600"><strong class="text-gray-900">Detalles:</strong> ${detalles}</p>
                                         </div>` : ''}
                                     </div>
-                                    ${adopcion.imageUrl ? `<div class="h-28 w-28 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-white sm:h-32 sm:w-32">
-                                        <img src="${adopcion.imageUrl}" alt="Foto de ${adopcion.nombreAnimal}" class="preview-image h-full w-full cursor-zoom-in object-cover" data-full-image="${adopcion.imageUrl}" data-image-alt="Foto de ${adopcion.nombreAnimal}">
-                                    </div>` : ''}
+                                    ${imagePanel}
                                 </div>
-                                <div class="flex items-center justify-between pt-3 border-t border-teal-200">
+                                <div class="mt-auto flex items-center gap-2 border-t border-teal-200 pt-3 ${hasActionButton ? 'justify-between' : 'justify-start'}">
                                     <span class="text-xs text-gray-600">Registrado el ${fecha}</span>
-                                    <button
-                                        type="button"
-                                        class="request-adoption inline-flex items-center justify-center rounded-full bg-teal-700 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-700/30 ring-2 ring-teal-300 transition hover:bg-teal-800 hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-300 ${adoptionId ? '' : 'opacity-50 cursor-not-allowed'}"
-                                        data-id="${adoptionId}"
-                                        data-name="${String(adopcion.nombreAnimal || '').replace(/"/g, '&quot;')}"
-                                        title="${CAN_REQUEST_ADOPTION ? 'Abrir formulario de solicitud' : 'Solo usuarios con rol ciudadano pueden solicitar adopción'}"
-                                        ${adoptionId ? '' : 'disabled'}
-                                    >
-                                        Solicitar adopción
-                                    </button>
+                                    ${canEditAction
+                                        ? `<button
+                                            type="button"
+                                            class="edit-adoption inline-flex items-center justify-center rounded-full bg-teal-700 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-700/30 ring-2 ring-teal-300 transition hover:bg-teal-800 hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-300"
+                                            data-id="${adoptionId}"
+                                            data-nombre="${escapeAttr(normalizeText(adopcion.nombreAnimal, ''))}"
+                                            data-tipo="${escapeAttr(normalizeText(adopcion.tipoAnimal, ''))}"
+                                            data-sexo="${escapeAttr(sexoValue)}"
+                                            data-edad="${edad === null ? '' : edad}"
+                                            data-raza="${escapeAttr(normalizeText(adopcion.raza, ''))}"
+                                            data-detalles="${escapeAttr(normalizeText(adopcion.detalles, ''))}"
+                                        >
+                                            Editar mascota registrada
+                                        </button>`
+                                        : canRequestAction
+                                        ? `<button
+                                            type="button"
+                                            class="request-adoption inline-flex items-center justify-center rounded-full bg-teal-700 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-700/30 ring-2 ring-teal-300 transition hover:bg-teal-800 hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-300 ${rawAdoptionId ? '' : 'opacity-50 cursor-not-allowed'}"
+                                            data-id="${adoptionId}"
+                                            data-name="${escapeAttr(normalizeText(adopcion.nombreAnimal, ''))}"
+                                            title="Abrir formulario de solicitud"
+                                            ${rawAdoptionId ? '' : 'disabled'}
+                                        >
+                                            Solicitar adopción
+                                        </button>`
+                                        : ''}
                                 </div>
                             </div>
                         `;
                         adopcionList.innerHTML += html;
                     });
+
+                    bindAdoptionImageFallbackHandlers(adopcionList);
                 } else {
-                    adopcionList.innerHTML = '<div class="text-center py-12"><p class="text-gray-500 text-lg">No hay adopciones registradas aún</p><p class="text-gray-400 text-sm mt-2">¡Sé el primero en registrar una mascota!</p></div>';
+                    adopcionList.innerHTML = '<div class="col-span-full text-center py-12"><p class="text-gray-500 text-lg">No hay adopciones registradas aún</p><p class="text-gray-400 text-sm mt-2">¡Sé el primero en registrar una mascota!</p></div>';
                 }
             } catch (error) {
                 console.error('Error al cargar adopciones:', error);
-                adopcionList.innerHTML = '<div class="text-center py-12"><p class="text-red-600 text-lg font-medium">Error al cargar adopciones</p><p class="text-gray-400 text-sm mt-2">Intenta recargar la página</p></div>';
+                adopcionList.innerHTML = '<div class="col-span-full text-center py-12"><p class="text-red-600 text-lg font-medium">Error al cargar adopciones</p><p class="text-gray-400 text-sm mt-2">Intenta recargar la página</p></div>';
             }
         }
 
@@ -726,6 +1008,22 @@
 
         if (CANCEL_ADOPTION_REQUEST_MODAL) {
             CANCEL_ADOPTION_REQUEST_MODAL.addEventListener('click', closeAdoptionRequestModal);
+        }
+
+        if (CLOSE_EDIT_ADOPTION_MODAL) {
+            CLOSE_EDIT_ADOPTION_MODAL.addEventListener('click', closeEditAdoptionModal);
+        }
+
+        if (CANCEL_EDIT_ADOPTION_MODAL) {
+            CANCEL_EDIT_ADOPTION_MODAL.addEventListener('click', closeEditAdoptionModal);
+        }
+
+        if (EDIT_ADOPTION_MODAL) {
+            EDIT_ADOPTION_MODAL.addEventListener('click', function (event) {
+                if (event.target === EDIT_ADOPTION_MODAL) {
+                    closeEditAdoptionModal();
+                }
+            });
         }
 
         if (ADOPTION_REQUEST_MODAL) {
@@ -767,6 +1065,7 @@
                 closeImagePreview();
                 closeAdoptionRequestModal();
                 closeAdoptionRequestSuccessModal();
+                closeEditAdoptionModal();
             }
         });
 
@@ -796,73 +1095,36 @@
                     return;
                 }
 
+                if (requestedAdoptionIds.has(String(adoptionId).trim())) {
+                    showAlert('Ya enviaste una solicitud para esta mascota.', 'error');
+                    return;
+                }
+
                 openAdoptionRequestModal(adoptionId, requestBtn.dataset.name || 'esta mascota');
                 return;
             }
 
-            const imageBtn = event.target.closest('.change-image');
-            if (imageBtn && !imageBtn.disabled) {
+            const editBtn = event.target.closest('.edit-adoption');
+            if (editBtn && !editBtn.disabled) {
                 if (!IS_AUTHENTICATED) {
-                    showAlert('Debes iniciar sesión para actualizar imágenes', 'error');
+                    showAlert('Debes iniciar sesión para editar esta adopción', 'error');
                     return;
                 }
 
-                if (!CAN_MANAGE_ADOPTION_IMAGE) {
-                    showAlert('No tienes permisos para actualizar imágenes', 'error');
+                if (!CAN_REGISTER_ADOPTION) {
+                    showAlert('No tienes permisos para editar adopciones', 'error');
                     return;
                 }
 
-                const adoptionId = imageBtn.dataset.id;
-                if (!adoptionId) {
-                    showAlert('No se pudo identificar la adopción', 'error');
-                    return;
-                }
-
-                const picker = document.createElement('input');
-                picker.type = 'file';
-                picker.accept = 'image/*';
-
-                picker.addEventListener('change', async () => {
-                    const file = picker.files?.[0];
-                    if (!file) {
-                        return;
-                    }
-
-                    const originalText = imageBtn.textContent;
-                    imageBtn.disabled = true;
-                    imageBtn.textContent = 'Subiendo...';
-
-                    try {
-                        const formData = new FormData();
-                        formData.append('fotoMascota', file);
-
-                        const updateUrl = UPDATE_IMAGE_URL_TEMPLATE.replace('__ID__', encodeURIComponent(adoptionId));
-                        const response = await fetch(updateUrl, {
-                            method: 'POST',
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-CSRF-TOKEN': CSRF_TOKEN || '',
-                            },
-                            body: formData,
-                        });
-
-                        const result = await response.json().catch(() => ({}));
-                        if (!response.ok || !result.success) {
-                            showAlert('Error: ' + (result.message || 'No se pudo actualizar la imagen'), 'error');
-                            return;
-                        }
-
-                        showAlert('Imagen actualizada correctamente', 'success');
-                        loadAdopciones();
-                    } catch (error) {
-                        showAlert('Error: ' + error.message, 'error');
-                    } finally {
-                        imageBtn.disabled = false;
-                        imageBtn.textContent = originalText;
-                    }
+                openEditAdoptionModal({
+                    id: editBtn.dataset.id,
+                    nombre: editBtn.dataset.nombre,
+                    tipo: editBtn.dataset.tipo,
+                    sexo: editBtn.dataset.sexo,
+                    edad: editBtn.dataset.edad,
+                    raza: editBtn.dataset.raza,
+                    detalles: editBtn.dataset.detalles,
                 });
-
-                picker.click();
                 return;
             }
 
@@ -920,6 +1182,94 @@
             }
         });
 
+        if (EDIT_ADOPTION_FORM) {
+            EDIT_ADOPTION_FORM.addEventListener('submit', async function (event) {
+                event.preventDefault();
+
+                if (!IS_AUTHENTICATED) {
+                    showAlert('Debes iniciar sesión para editar esta adopción', 'error');
+                    return;
+                }
+
+                if (!CAN_REGISTER_ADOPTION) {
+                    showAlert('No tienes permisos para editar adopciones', 'error');
+                    return;
+                }
+
+                const adoptionId = EDIT_ADOPTION_ID?.value || '';
+                const nombreAnimal = document.getElementById('editNombreAnimal')?.value?.trim() || '';
+                const tipoAnimal = document.getElementById('editTipoAnimal')?.value || '';
+                const sexo = document.getElementById('editSexo')?.value || '';
+                const edad = document.getElementById('editEdad')?.value || '';
+                const raza = document.getElementById('editRaza')?.value?.trim() || '';
+                const detalles = document.getElementById('editDetalles')?.value?.trim() || '';
+                const fotoMascota = document.getElementById('editFotoMascota')?.files?.[0];
+
+                if (!adoptionId) {
+                    showAlert('No se pudo identificar la adopción a editar', 'error');
+                    return;
+                }
+
+                if (!nombreAnimal || !tipoAnimal || !sexo || !edad || !raza) {
+                    showAlert('Completa todos los campos obligatorios', 'error');
+                    return;
+                }
+
+                if (Number(edad) < 0 || Number(edad) > 50) {
+                    showAlert('Por favor, ingresa una edad válida (0-50)', 'error');
+                    return;
+                }
+
+                const originalText = EDIT_ADOPTION_SUBMIT_BTN?.textContent || 'Guardar cambios';
+                if (EDIT_ADOPTION_SUBMIT_BTN) {
+                    EDIT_ADOPTION_SUBMIT_BTN.disabled = true;
+                    EDIT_ADOPTION_SUBMIT_BTN.textContent = 'Guardando...';
+                }
+
+                try {
+                    const formData = new FormData();
+                    formData.append('_method', 'PATCH');
+                    formData.append('nombreAnimal', nombreAnimal);
+                    formData.append('tipoAnimal', tipoAnimal);
+                    formData.append('sexo', sexo);
+                    formData.append('edad', edad);
+                    formData.append('raza', raza);
+                    formData.append('detalles', detalles);
+
+                    if (fotoMascota) {
+                        formData.append('fotoMascota', fotoMascota);
+                    }
+
+                    const updateUrl = UPDATE_ADOPTION_URL_TEMPLATE.replace('__ID__', encodeURIComponent(adoptionId));
+                    const response = await fetch(updateUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': CSRF_TOKEN || '',
+                        },
+                        body: formData,
+                    });
+
+                    const result = await response.json().catch(() => ({}));
+                    if (!response.ok || !result.success) {
+                        showAlert('Error: ' + (result.message || 'No se pudo actualizar la mascota'), 'error');
+                        return;
+                    }
+
+                    closeEditAdoptionModal();
+                    showAlert('¡Mascota actualizada con éxito!', 'success');
+                    loadAdopciones();
+                } catch (error) {
+                    showAlert('Error: ' + error.message, 'error');
+                } finally {
+                    if (EDIT_ADOPTION_SUBMIT_BTN) {
+                        EDIT_ADOPTION_SUBMIT_BTN.disabled = false;
+                        EDIT_ADOPTION_SUBMIT_BTN.textContent = originalText;
+                    }
+                }
+            });
+        }
+
         if (ADOPTION_REQUEST_FORM) {
             ADOPTION_REQUEST_FORM.addEventListener('submit', async function (event) {
                 event.preventDefault();
@@ -935,6 +1285,7 @@
                 }
 
                 const adoptionId = ADOPTION_REQUEST_ADOPTION_ID?.value;
+                const normalizedAdoptionId = String(adoptionId || '').trim();
                 const nombreCompleto = document.getElementById('solicitudNombreCompleto')?.value?.trim();
                 const direccionCiudad = document.getElementById('solicitudDireccionCiudad')?.value?.trim();
                 const tipoVivienda = document.getElementById('solicitudTipoVivienda')?.value;
@@ -953,6 +1304,11 @@
 
                 if (!adoptionId) {
                     showAlert('No se pudo identificar la mascota', 'error');
+                    return;
+                }
+
+                if (normalizedAdoptionId !== '' && requestedAdoptionIds.has(normalizedAdoptionId)) {
+                    showAlert('Ya enviaste una solicitud para esta mascota.', 'error');
                     return;
                 }
 
@@ -1028,12 +1384,23 @@
                     const result = await response.json().catch(() => ({}));
 
                     if (!response.ok || !result.success) {
+                        if (response.status === 409) {
+                            await loadRequestedAdoptionIds(true);
+                            loadAdopciones();
+                        }
+
                         showAlert('Error: ' + (result.message || 'No se pudo enviar la solicitud'), 'error');
                         return;
                     }
 
+                    if (normalizedAdoptionId !== '') {
+                        requestedAdoptionIds.add(normalizedAdoptionId);
+                        requestedAdoptionIdsLoaded = true;
+                    }
+
                     closeAdoptionRequestModal();
                     openAdoptionRequestSuccessModal();
+                    loadAdopciones();
                 } catch (error) {
                     showAlert('Error: ' + error.message, 'error');
                 } finally {
@@ -1064,13 +1431,14 @@
 
             const nombreAnimal = document.getElementById('nombreAnimal').value.trim();
             const tipoAnimal = document.getElementById('tipoAnimal').value;
+            const sexo = document.getElementById('sexo').value;
             const edad = document.getElementById('edad').value;
             const raza = document.getElementById('raza').value.trim();
             const detalles = document.getElementById('detalles').value.trim();
             const fotoMascota = document.getElementById('fotoMascota').files[0];
 
             // Validaciones básicas
-            if (!nombreAnimal || !raza || !edad || !tipoAnimal) {
+            if (!nombreAnimal || !raza || !edad || !tipoAnimal || !sexo) {
                 showAlert('Por favor, completa todos los campos obligatorios', 'error');
                 return;
             }
@@ -1089,6 +1457,7 @@
                 const formData = new FormData();
                 formData.append('nombreAnimal', nombreAnimal);
                 formData.append('tipoAnimal', tipoAnimal);
+                formData.append('sexo', sexo);
                 formData.append('edad', edad);
                 formData.append('raza', raza);
                 formData.append('detalles', detalles || '');
@@ -1103,7 +1472,7 @@
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': CSRF_TOKEN || '',
                     },
-                    body: formData
+                    body: formData,
                 });
 
                 const result = await response.json();
@@ -1120,7 +1489,7 @@
                 console.error('Error:', error);
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Registrar Adopción';
+                btn.textContent = 'Registrar adopción';
             }
             });
         }

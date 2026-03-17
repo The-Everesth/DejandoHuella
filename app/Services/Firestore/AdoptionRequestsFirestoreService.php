@@ -15,17 +15,40 @@ class AdoptionRequestsFirestoreService
     public function createForAdoption(string $adoptionId, int $applicantId, array $data): array
     {
         $requestId = $this->buildRequestId($adoptionId, $applicantId);
+        $targetStatus = (string) ($data['status'] ?? 'pendiente');
 
         $existing = $this->client->getDoc($this->collection, $requestId);
         if (is_array($existing)) {
-            throw new \RuntimeException('Ya enviaste una solicitud para esta mascota.');
+            $existingStatus = strtolower(trim((string) ($existing['status'] ?? 'pendiente')));
+            $isCancelled = in_array($existingStatus, ['cancelada', 'cancelled', 'canceled'], true);
+
+            if (! $isCancelled) {
+                throw new \RuntimeException('Ya enviaste una solicitud para esta mascota.');
+            }
+
+            $payload = array_merge($data, [
+                'id' => $requestId,
+                'adoptionId' => $adoptionId,
+                'applicantId' => $applicantId,
+                'status' => $targetStatus,
+                'createdAt' => now()->toIso8601String(),
+                'updatedAt' => now()->toIso8601String(),
+                'cancelledAt' => null,
+                'cancelledBy' => null,
+                'reviewedAt' => null,
+                'reviewedBy' => null,
+            ]);
+
+            $this->client->patchDoc($this->collection, $requestId, $payload);
+
+            return $this->client->getDoc($this->collection, $requestId) ?? $payload;
         }
 
         $payload = array_merge($data, [
             'id' => $requestId,
             'adoptionId' => $adoptionId,
             'applicantId' => $applicantId,
-            'status' => $data['status'] ?? 'pendiente',
+            'status' => $targetStatus,
             'createdAt' => now()->toIso8601String(),
             'updatedAt' => now()->toIso8601String(),
         ]);
