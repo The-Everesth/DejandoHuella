@@ -27,6 +27,16 @@
                 $statusClasses = 'bg-yellow-100 text-yellow-800';
                 $requestId = (string) ($item['id'] ?? $item['_docId'] ?? '');
                 $isPending = ! $isApproved && ! $isRejected && ! $isCancelled;
+                $reviewerNote = trim((string) ($item['reviewerNote'] ?? ''));
+                $reviewerNoteAtLabel = '';
+
+                if (!empty($item['reviewerNoteAt'])) {
+                    try {
+                        $reviewerNoteAtLabel = \Carbon\Carbon::parse((string) $item['reviewerNoteAt'])->format('d/m/Y H:i');
+                    } catch (\Throwable $e) {
+                        $reviewerNoteAtLabel = (string) $item['reviewerNoteAt'];
+                    }
+                }
 
                 if ($isApproved) {
                     $statusLabel = 'Aprobada';
@@ -70,6 +80,16 @@
                         @endif
                     </div>
                 </div>
+
+                @if($reviewerNote !== '')
+                    <div class="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+                        <p class="font-semibold">Nota de la veterinaria/refugio</p>
+                        <p class="mt-1 whitespace-pre-line">{{ $reviewerNote }}</p>
+                        @if($reviewerNoteAtLabel !== '')
+                            <p class="mt-1 text-xs text-blue-700">Actualizada: {{ $reviewerNoteAtLabel }}</p>
+                        @endif
+                    </div>
+                @endif
             </div>
         @empty
             <div class="p-4 border rounded bg-white text-gray-600">
