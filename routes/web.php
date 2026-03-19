@@ -122,6 +122,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/requests/{requestId}/status', [AdoptionsController::class, 'updateRequestStatus'])
         ->middleware('role:veterinario|refugio')
         ->name('requests.status');
+    Route::patch('/requests/{requestId}/note', [AdoptionsController::class, 'updateRequestNote'])
+        ->middleware('role:veterinario|refugio')
+        ->name('requests.note');
 
     // Citas (ciudadano)
     Route::get('/appointments/create/{clinic}/{service}', [AppointmentController::class, 'create'])->name('appointments.create');

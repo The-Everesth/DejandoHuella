@@ -291,6 +291,57 @@ class AdoptionsController extends Controller
     }
 
     /**
+     * Guardar una nota visible para el ciudadano en una solicitud de adopcion.
+     */
+    public function updateRequestNote(Request $request, string $requestId)
+    {
+        $user = auth()->user();
+        if ($user && $user->hasRole('admin')) {
+            abort(403, 'El rol admin solo puede visualizar el estado de las solicitudes.');
+        }
+
+        $validated = $request->validate([
+            'reviewerNote' => 'required|string|max:1000',
+        ]);
+
+        $solicitud = $this->adoptionRequests->get($requestId);
+        if (! is_array($solicitud)) {
+            return back()->with('error', 'La solicitud no fue encontrada.');
+        }
+
+        $currentStatus = strtolower(trim((string) ($solicitud['status'] ?? 'pendiente')));
+        if (in_array($currentStatus, ['cancelada', 'cancelled', 'canceled'], true)) {
+            return back()->with('error', 'No se puede agregar una nota a una solicitud cancelada.');
+        }
+
+        $adoptionId = (string) ($solicitud['adoptionId'] ?? '');
+        if ($adoptionId === '') {
+            return back()->with('error', 'La solicitud no tiene una publicacion asociada valida.');
+        }
+
+        $adopcion = $this->firebase->get($adoptionId);
+        if (! is_array($adopcion)) {
+            return back()->with('error', 'La publicacion asociada no fue encontrada.');
+        }
+
+        if (! $this->canCurrentUserManageAdoption($adopcion)) {
+            abort(403, 'No tienes permisos para editar esta solicitud.');
+        }
+
+        $saved = $this->adoptionRequests->setStatus($requestId, (string) ($solicitud['status'] ?? 'pendiente'), [
+            'reviewerNote' => trim((string) $validated['reviewerNote']),
+            'reviewerNoteAt' => now()->toIso8601String(),
+            'reviewerNoteBy' => $user ? (int) $user->id : null,
+        ]);
+
+        if (! $saved) {
+            return back()->with('error', 'No se pudo guardar la nota. Intenta de nuevo.');
+        }
+
+        return back()->with('success', 'Nota guardada correctamente.');
+    }
+
+    /**
      * Guardar una nueva adopción
      */
     public function store(Request $request)
