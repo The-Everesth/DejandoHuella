@@ -11,6 +11,8 @@ class PasswordUpdateTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const STRONG_PASSWORD = 'NuevaClave1!';
+
     public function test_password_can_be_updated(): void
     {
         $user = User::factory()->create();
@@ -20,15 +22,15 @@ class PasswordUpdateTest extends TestCase
             ->from('/profile')
             ->put('/password', [
                 'current_password' => 'password',
-                'password' => 'new-password',
-                'password_confirmation' => 'new-password',
+                'password' => self::STRONG_PASSWORD,
+                'password_confirmation' => self::STRONG_PASSWORD,
             ]);
 
         $response
             ->assertSessionHasNoErrors()
             ->assertRedirect('/profile');
 
-        $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
+        $this->assertTrue(Hash::check(self::STRONG_PASSWORD, $user->refresh()->password));
     }
 
     public function test_correct_password_must_be_provided_to_update_password(): void
@@ -40,12 +42,30 @@ class PasswordUpdateTest extends TestCase
             ->from('/profile')
             ->put('/password', [
                 'current_password' => 'wrong-password',
-                'password' => 'new-password',
-                'password_confirmation' => 'new-password',
+                'password' => self::STRONG_PASSWORD,
+                'password_confirmation' => self::STRONG_PASSWORD,
             ]);
 
         $response
             ->assertSessionHasErrorsIn('updatePassword', 'current_password')
+            ->assertRedirect('/profile');
+    }
+
+    public function test_password_must_meet_the_strength_requirements(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->put('/password', [
+                'current_password' => 'password',
+                'password' => 'weakpass',
+                'password_confirmation' => 'weakpass',
+            ]);
+
+        $response
+            ->assertSessionHasErrorsIn('updatePassword', 'password')
             ->assertRedirect('/profile');
     }
 }

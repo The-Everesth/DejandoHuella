@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -41,6 +43,54 @@ class ProfileTest extends TestCase
         $this->assertSame('Test User', $user->name);
         $this->assertSame('test@example.com', $user->email);
         $this->assertNull($user->email_verified_at);
+    }
+
+    public function test_profile_photo_can_be_uploaded(): void
+    {
+        $directory = public_path('uploads/profile-photos');
+
+        File::deleteDirectory($directory);
+
+        try {
+            $user = User::factory()->create();
+            $photo = UploadedFile::fake()->image('profile-photo.jpg');
+
+            $response = $this
+                ->actingAs($user)
+                ->patch('/profile', [
+                    'name' => 'Test User',
+                    'email' => 'test@example.com',
+                    'profile_photo' => $photo,
+                ]);
+
+            $response
+                ->assertSessionHasNoErrors()
+                ->assertRedirect('/profile');
+
+            $user->refresh();
+
+            $this->assertNotNull($user->profile_photo_path);
+            $this->assertFileExists(public_path($user->profile_photo_path));
+        } finally {
+            File::deleteDirectory($directory);
+        }
+    }
+
+    public function test_profile_information_rejects_invalid_name_format(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->patch('/profile', [
+                'name' => 'Test User!',
+                'email' => 'test@example.com',
+            ]);
+
+        $response
+            ->assertSessionHasErrors('name')
+            ->assertRedirect('/profile');
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void

@@ -29,6 +29,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $intendedPath = parse_url((string) $request->session()->get('url.intended'), PHP_URL_PATH);
+
+        if ($intendedPath === '/profile') {
+            $request->session()->forget('url.intended');
+        }
+
         return redirect()->intended(RouteServiceProvider::HOME);
     }
 

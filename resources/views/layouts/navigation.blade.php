@@ -31,7 +31,7 @@
             </div>
 
             <!-- Right side (Login pill / User pill) -->
-            <div class="hidden md:flex items-center">
+            <div class="hidden md:flex items-center mr-1 lg:mr-3">
                 @guest
                     <a href="{{ route('login') }}"
                        class="bg-[#F5E7DA] text-black font-bold px-8 py-2 rounded-full hover:opacity-90 transition">
@@ -40,17 +40,31 @@
                 @else
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">
-                            <button class="bg-[#F5E7DA] text-black font-bold px-6 py-2 rounded-full hover:opacity-90 transition inline-flex items-center gap-2">
-                                <span>{{ Auth::user()->name }}</span>
-                                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z" clip-rule="evenodd" />
-                                </svg>
+                            <button class="inline-flex items-center gap-2 hover:opacity-95 transition">
+                                <span class="inline-flex items-center gap-2 rounded-full bg-[#F5E7DA] px-5 py-2 text-black font-bold max-w-xs">
+                                    <span class="truncate max-w-[11rem]">{{ Auth::user()->name }}</span>
+                                    <svg class="h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+
+                                @if (Auth::user()->profile_photo_url)
+                                    <img
+                                        src="{{ Auth::user()->profile_photo_url }}"
+                                        alt="Foto de perfil"
+                                        class="h-10 w-10 rounded-full object-cover ring-2 ring-white/60 shadow-sm"
+                                    >
+                                @else
+                                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-xs font-extrabold text-white ring-2 ring-white/30">
+                                        {{ Auth::user()->profile_initials }}
+                                    </span>
+                                @endif
                             </button>
                         </x-slot>
 
                         <x-slot name="content">
-                            <x-dropdown-link :href="route('dashboard')">Dashboard</x-dropdown-link>
                             <x-dropdown-link :href="route('profile.edit')">Perfil</x-dropdown-link>
+                            <x-dropdown-link :href="route('dashboard')">Dashboard</x-dropdown-link>
 
                             <div class="border-t my-1"></div>
 
@@ -133,8 +147,8 @@
                 <a class="block bg-[#F5E7DA] text-black font-bold px-4 py-2 rounded-full text-center"
                    href="{{ route('login') }}">Login</a>
             @else
-                <a class="block py-2" href="{{ route('dashboard') }}">Dashboard</a>
                 <a class="block py-2" href="{{ route('profile.edit') }}">Perfil</a>
+                <a class="block py-2" href="{{ route('dashboard') }}">Dashboard</a>
                 <a class="block py-2" href="{{ route('tickets.index') }}">Mensajes</a>
 
                 @role('admin')
