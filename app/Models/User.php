@@ -17,6 +17,7 @@ use App\Models\VeterinarianProfile;
 use App\Models\Appointment;
 
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 
 class User extends Authenticatable
@@ -37,6 +38,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'profile_photo_path',
         'password',
     ];
 
@@ -154,6 +156,28 @@ class User extends Authenticatable
         }
 
         return null;
+    }
+
+    public function getProfilePhotoUrlAttribute(): ?string
+    {
+        if (! $this->profile_photo_path) {
+            return null;
+        }
+
+        return asset($this->profile_photo_path);
+    }
+
+    public function getProfileInitialsAttribute(): string
+    {
+        $initials = Str::of($this->name ?? '')
+            ->trim()
+            ->explode(' ')
+            ->filter()
+            ->take(2)
+            ->map(fn (string $segment) => Str::upper(Str::substr($segment, 0, 1)))
+            ->implode('');
+
+        return $initials !== '' ? $initials : 'U';
     }
 
 }

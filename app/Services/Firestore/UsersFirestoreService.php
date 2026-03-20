@@ -28,6 +28,8 @@ class UsersFirestoreService
                 'laravelUserId'  => $user->id,
                 'name'           => $user->name,
                 'email'          => $user->email,
+                'profilePhotoPath' => $user->profile_photo_path,
+                'profilePhotoUrl'  => $user->profile_photo_url,
                 'role'           => $this->getRole($user),
                 'status'         => $user->status ?? 'active',
                 'createdAt'      => $user->created_at->toIso8601String(),
