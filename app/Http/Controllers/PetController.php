@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Services\Firestore\PetsFirestoreService;
 use Illuminate\Support\Facades\Log;
 
+
 use App\Models\Pet;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -32,6 +33,7 @@ class PetController extends Controller
         return view('pets.create');
     }
 
+
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -41,24 +43,41 @@ class PetController extends Controller
             'breed' => 'nullable|string|max:50',
             'ageYears' => 'nullable|integer|min:0|max:50',
             'notes' => 'nullable|string|max:255',
+            'photo' => 'nullable|image|max:4096', // Validación igual que adopciones
         ]);
 
         $data['ownerUid'] = $this->getOwnerUid();
-        Log::info('[PETS] ownerUid store', ['ownerUid' => $data['ownerUid']]);
         $data['isActive'] = true;
         $data['createdAt'] = now()->toIso8601String();
         $data['updatedAt'] = now()->toIso8601String();
 
-        Log::info('[PETS] create payload', $data);
-        try {
-            $svc = app(PetsFirestoreService::class);
-            $pet = $svc->createPet($data);
-            Log::info('[PETS] created', ['id' => $pet['id'] ?? null]);
-            return redirect()->route('my.pets')->with('success', 'Mascota registrada.');
-        } catch (\Throwable $e) {
-            Log::error('[PETS] error', ['msg' => $e->getMessage()]);
-            return back()->withInput()->with('error', 'No se pudo guardar la mascota: ' . $e->getMessage());
+        $photoFile = $request->file('photo');
+        unset($data['photo']); // Nunca guardar la ruta temporal
+
+        $svc = app(\App\Services\Firestore\PetsFirestoreService::class);
+        $pet = $svc->createPet($data);
+        $petId = $pet['id'] ?? null;
+
+        // Guardar la foto si existe
+        if ($photoFile && $photoFile->isValid()) {
+            $directory = public_path('uploads/pets');
+            if (!is_dir($directory)) {
+                mkdir($directory, 0755, true);
+            }
+            $filename = \Illuminate\Support\Str::uuid()->toString() . '.' . $photoFile->getClientOriginalExtension();
+            $photoFile->move($directory, $filename);
+
+            $photoPath = 'uploads/pets/' . $filename;
+            $photoUrl = url($photoPath);
+
+            // Actualizar Firestore con las rutas de la foto
+            $svc->updatePet($petId, [
+                'photoPath' => $photoPath,
+                'photoUrl' => $photoUrl,
+            ]);
         }
+
+        return redirect()->route('my.pets')->with('success', 'Mascota registrada.');
     }
 
 
@@ -89,8 +108,32 @@ class PetController extends Controller
             'breed' => 'nullable|string|max:50',
             'ageYears' => 'nullable|integer|min:0|max:50',
             'notes' => 'nullable|string|max:255',
+            'photo' => 'nullable|image|max:4096',
         ]);
+        $photoFile = $request->file('photo');
+        unset($data['photo']); // Nunca guardar la ruta temporal
+
         $svc->updatePet($pet, $data);
+
+        // Guardar la foto si existe
+        if ($photoFile && $photoFile->isValid()) {
+            $directory = public_path('uploads/pets');
+            if (!is_dir($directory)) {
+                mkdir($directory, 0755, true);
+            }
+            $filename = \Illuminate\Support\Str::uuid()->toString() . '.' . $photoFile->getClientOriginalExtension();
+            $photoFile->move($directory, $filename);
+
+            $photoPath = 'uploads/pets/' . $filename;
+            $photoUrl = url($photoPath);
+
+            // Actualizar Firestore con las rutas de la foto
+            $svc->updatePet($pet, [
+                'photoPath' => $photoPath,
+                'photoUrl' => $photoUrl,
+            ]);
+        }
+
         return redirect()->route('my.pets')->with('success', 'Mascota actualizada correctamente.');
     }
 

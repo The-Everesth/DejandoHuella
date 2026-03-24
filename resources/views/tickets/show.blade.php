@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
   <h2 class="text-xl font-bold mb-2">{{ $ticket->subject }}</h2>
   <div class="text-sm text-gray-600 mb-4">
     Prioridad: {{ $ticket->priority }} | Estado: <b>{{ $ticket->status }}</b>
@@ -20,4 +22,4 @@
   @else
     <p class="text-sm text-gray-600">Aún no hay respuesta.</p>
   @endif
-</x-app-layout>
+@endsection

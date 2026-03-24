@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
     <x-page-title 
         title="Panel de Administración"
         subtitle="Vista general del sistema DejandoHuella"
@@ -72,4 +74,4 @@
         </x-card>
 
     </div>
-</x-app-layout>
+@endsection

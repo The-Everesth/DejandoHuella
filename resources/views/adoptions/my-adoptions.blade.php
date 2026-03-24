@@ -1,8 +1,9 @@
-<x-app-layout>
-    <x-page-title
-        title="Mis adopciones"
-        subtitle="Aquí puedes ver las mascotas que registraste para adopción."
-    />
+
+@extends('layouts.app')
+
+@section('content')
+    <h1 class="text-2xl font-bold mb-2 text-gray-800">Mis adopciones</h1>
+    <p class="mb-6 text-gray-500">Aquí puedes ver las mascotas que registraste para adopción.</p>
 
     <div id="createAdoptionAlert" class="mb-4 hidden rounded-lg p-4 text-sm font-medium"></div>
 
@@ -966,4 +967,4 @@
             }
         });
     </script>
-</x-app-layout>
+@endsection

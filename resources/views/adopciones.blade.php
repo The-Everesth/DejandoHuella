@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
     @php($canRegisterAdoption = false)
     @php($canDeleteAdoption = false)
     @php($canRequestAdoption = auth()->check() && auth()->user()->hasRole('ciudadano'))
@@ -1494,4 +1496,4 @@
             });
         }
     </script>
-</x-app-layout>
+@endsection

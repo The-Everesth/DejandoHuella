@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
 <h2 class="text-xl font-bold mb-4">Editar servicio</h2>
 
 <form method="POST" action="{{ route('admin.services.update', $service) }}" class="space-y-3">
@@ -10,4 +12,4 @@
 <button class="border rounded px-4 py-2">Actualizar</button>
 </form>
 
-</x-app-layout>
+@endsection

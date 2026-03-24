@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
   <h2 class="text-xl font-bold mb-2">{{ $ticket->subject }}</h2>
 
   @if(session('success'))
@@ -42,4 +44,4 @@
     @csrf
     <button class="underline">Cerrar ticket</button>
   </form>
-</x-app-layout>
+@endsection

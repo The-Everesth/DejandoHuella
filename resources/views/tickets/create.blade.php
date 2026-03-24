@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
   <h2 class="text-xl font-bold mb-4">Enviar mensaje a administración</h2>
 
   @if($errors->any())
@@ -21,4 +23,4 @@
 
     <button class="border rounded px-4 py-2">Enviar</button>
   </form>
-</x-app-layout>
+@endsection

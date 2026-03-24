@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
 <h2 class="text-xl font-bold mb-4">Servicios de: {{ $clinic->name }}</h2>
 
 <form method="POST" action="{{ route('vet.clinics.services.update', $clinic) }}" class="space-y-3">
@@ -25,4 +27,4 @@
 <button class="border rounded px-4 py-2">Guardar</button>
 </form>
 
-</x-app-layout>
+@endsection
