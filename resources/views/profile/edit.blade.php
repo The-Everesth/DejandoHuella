@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
     <div class="space-y-8 py-6">
         <section class="overflow-hidden rounded-[2rem] bg-gradient-to-br from-teal-700 via-teal-600 to-emerald-500 text-white shadow-xl shadow-teal-900/10">
             <div class="grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)] lg:items-end">
@@ -63,4 +65,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+@endsection

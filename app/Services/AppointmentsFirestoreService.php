@@ -8,6 +8,17 @@ use Exception;
 
 class AppointmentsFirestoreService
 {
+    /**
+     * Obtiene una cita por su ID
+     */
+    public function getById(string $appointmentId)
+    {
+        $doc = $this->client->getDoc($this->collection, $appointmentId);
+        if ($doc) {
+            $doc['id'] = $appointmentId;
+        }
+        return $doc;
+    }
     protected FirestoreRestClient $client;
     protected string $collection = 'appointments';
 

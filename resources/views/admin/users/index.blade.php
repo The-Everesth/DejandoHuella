@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
     <x-page-title title="Usuarios" subtitle="Administración de cuentas y roles." />
 
     <x-card class="mb-4">
@@ -186,4 +188,4 @@
             {{ $users->links() }}
         </div>
     </x-card>
-</x-app-layout>
+@endsection

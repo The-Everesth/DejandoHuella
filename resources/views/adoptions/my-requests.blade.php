@@ -1,8 +1,9 @@
-<x-app-layout>
-    <x-page-title
-        title="Mis solicitudes de adopcion"
-        subtitle="Aqui puedes ver el estado de tus solicitudes de adopcion."
-    />
+
+@extends('layouts.app')
+
+@section('content')
+    <h1 class="text-2xl font-bold mb-2 text-gray-800">Mis solicitudes de adopción</h1>
+    <p class="mb-6 text-gray-500">Aquí puedes ver el estado de tus solicitudes de adopción.</p>
 
     @if(session('success'))
         <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-800">
@@ -188,4 +189,4 @@
             });
         })();
     </script>
-</x-app-layout>
+@endsection

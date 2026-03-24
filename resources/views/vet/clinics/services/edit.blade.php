@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
     <x-page-title title="Servicios de {{ $clinic->name }}" subtitle="Selecciona los servicios que ofreces." />
 
     <x-card>
@@ -30,4 +32,4 @@
             </div>
         </form>
     </x-card>
-</x-app-layout>
+@endsection

@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
     <x-page-title title="Editar usuario" subtitle="Actualiza nombre y correo." />
 
     <x-card>
@@ -24,4 +26,4 @@
             </div>
         </form>
     </x-card>
-</x-app-layout>
+@endsection

@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
     {{-- HERO --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
         <x-card class="rounded-3xl">
@@ -63,4 +65,4 @@
             <div class="text-gray-600 mt-2">Componentes reutilizables: cards, botones, badges, alerts.</div>
         </x-card>
     </div>
-</x-app-layout>
+@endsection

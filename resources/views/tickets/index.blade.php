@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
   <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-bold">Mis mensajes</h2>
     <a class="underline" href="{{ route('tickets.create') }}">Enviar mensaje</a>
@@ -22,4 +24,4 @@
       <p>No has enviado mensajes.</p>
     @endforelse
   </div>
-</x-app-layout>
+@endsection

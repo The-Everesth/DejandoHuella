@@ -1,8 +1,9 @@
-<x-app-layout>
-    <x-page-title
-        title="Solicitudes recibidas de adopcion"
-        subtitle="Aqui puedes revisar las solicitudes enviadas para las mascotas que publicaste."
-    />
+
+@extends('layouts.app')
+
+@section('content')
+    <h1 class="text-2xl font-bold mb-2 text-gray-800">Solicitudes recibidas de adopción</h1>
+    <p class="mb-6 text-gray-500">Aquí puedes revisar las solicitudes enviadas para las mascotas que publicaste.</p>
 
     @if(session('success'))
         <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-800">
@@ -475,4 +476,4 @@
             applyPublishedRequestsFilters();
         })();
     </script>
-</x-app-layout>
+@endsection
