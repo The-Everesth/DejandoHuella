@@ -369,7 +369,7 @@ class AdoptionsController extends Controller
 
             if ($request->hasFile('fotoMascota')) {
                 $upload = $request->file('fotoMascota');
-                $directory = public_path('uploads/adoptions');
+                $directory = public_path('adopciones');
                 if (! is_dir($directory)) {
                     mkdir($directory, 0755, true);
                 }
@@ -377,8 +377,8 @@ class AdoptionsController extends Controller
                 $filename = Str::uuid()->toString().'.'.$upload->getClientOriginalExtension();
                 $upload->move($directory, $filename);
 
-                $validated['imagePath'] = 'uploads/adoptions/'.$filename;
-                $validated['imageUrl'] = url('uploads/adoptions/'.$filename);
+                $validated['imagePath'] = 'adopciones/'.$filename;
+                $validated['imageUrl'] = url('adopciones/'.$filename);
             }
 
             $created = $this->firebase->create($validated, $validated['id']);
