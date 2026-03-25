@@ -1,4 +1,5 @@
-<x-app-layout>
+@extends('layouts.app')
+@section('content')
     <section class="space-y-24">
         {{-- HERO + ACCESOS --}}
         <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 mb-20 mt-24">
@@ -171,4 +172,4 @@
             loadCounters();
         }
     </script>
-</x-app-layout>
+@endsection
