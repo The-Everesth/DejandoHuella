@@ -147,10 +147,6 @@
     </div>
 </section>
 
-<footer class="bg-[#0d9488] text-white pt-20 pb-10 mt-24">
-    <div class="max-w-7xl mx-auto px-4">
-        </div>
-</footer>
     <script>
         async function loadCounters() {
             try {
