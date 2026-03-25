@@ -19,6 +19,32 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+// Ruta pública para estadísticas del sistema (home page)
+Route::get('/system-stats', function () {
+    try {
+        $adoptionsService = app(\App\Services\Firestore\AdoptionsFirestoreService::class);
+        $usersService = app(\App\Services\Firestore\UsersFirestoreService::class);
+        $clinicsService = app(\App\Services\Firestore\ClinicsFirestoreService::class);
+
+        $adoptionsCount = count($adoptionsService->list());
+        $usersCount = count($usersService->list());
+        $clinicsCount = count($clinicsService->list());
+
+        return response()->json([
+            'users_count' => $usersCount,
+            'adoptions_count' => $adoptionsCount,
+            'clinics_count' => $clinicsCount,
+        ]);
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::warning('Error loading system stats: ' . $e->getMessage());
+        return response()->json([
+            'users_count' => 0,
+            'adoptions_count' => 0,
+            'clinics_count' => 0,
+        ]);
+    }
+});
+
 // Rutas públicas para adopciones
 Route::prefix('adoptions')->group(function () {
     Route::get('/', [AdoptionsController::class, 'index']);

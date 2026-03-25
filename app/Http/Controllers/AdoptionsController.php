@@ -943,7 +943,9 @@ class AdoptionsController extends Controller
     {
         $publisherId = (int) ($adoption['createdBy'] ?? 0);
         if ($publisherId <= 0) {
-            return false;
+            // Documentos legacy de Firestore pueden no traer owner local.
+            // Los dejamos visibles para no ocultar publicaciones válidas.
+            return true;
         }
 
         if (array_key_exists($publisherId, $this->allowedPublisherCache)) {
@@ -953,7 +955,7 @@ class AdoptionsController extends Controller
         $publisher = User::withTrashed()->find($publisherId);
         $isAllowed = $publisher
             ? $publisher->hasAnyRole('veterinario', 'refugio')
-            : false;
+            : true;
 
         $this->allowedPublisherCache[$publisherId] = $isAllowed;
 

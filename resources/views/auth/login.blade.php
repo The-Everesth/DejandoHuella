@@ -1,11 +1,13 @@
 <x-guest-layout>
     <div class="max-w-md mx-auto">
-        <div class="text-center mb-6">
-            <div class="text-3xl font-extrabold text-gray-900">Iniciar sesión</div>
-            <div class="text-gray-600 mt-1">Accede a tu cuenta de DejandoHuella</div>
-        </div>
-
-        <x-card class="rounded-3xl">
+        <x-card class="rounded-3xl pt-10 pb-8">
+            <div class="flex justify-center mb-4">
+                <img src="/img/logo-dejandohuella.png" alt="Logo Dejando Huella" class="h-24 w-24 rounded-full border-2 border-white shadow-md bg-white/80 object-cover object-center" />
+            </div>
+            <div class="text-center mb-6">
+                <div class="text-3xl font-extrabold text-gray-900">Iniciar sesión</div>
+                <div class="text-gray-600 mt-1">Accede a tu cuenta de DejandoHuella</div>
+            </div>
             <x-auth-session-status class="mb-4" :status="session('status')" />
 
             <form method="POST" action="{{ route('login') }}" class="space-y-4">

@@ -24,68 +24,51 @@
         <!-- Page Heading eliminado para evitar franja blanca -->
 
         <!-- Page Content (grows to push footer down) -->
-        <main class="flex-1">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <main class="flex-1 w-full bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 pt-24">
                 <x-flash />
                 @yield('content')
             </div>
         </main>
 
         <!-- Footer always at bottom -->
-        <footer class="bg-teal-700 text-black">
-            <div class="max-w-7xl mx-auto px-6 lg:px-8 py-10 grid grid-cols-1 md:grid-cols-3 gap-10">
-
-                <div>
-                    <h3 class="text-2xl font-bold mb-4">Información Animal</h3>
-                    <ul class="space-y-3 text-white/90 font-semibold">
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            Alimentación Animal
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            Enfermedades comunes
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            Esterilización/Vacunación
-                        </li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-bold mb-4">Información de contacto</h3>
-                    <ul class="space-y-3 text-white/90 font-semibold">
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            Blvd de la Juventud 1006A, Solares 20 de Noviembre, 34288 Durango, Dgo.
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-white"></span>
-                            +52 618 - 137 - 8344
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="md:text-right">
-                    <h3 class="text-2xl font-bold mb-4">Redes Sociales</h3>
-                    <div class="flex md:justify-end gap-6">
-                        <a href="#" class="h-14 w-14 rounded-full bg-[#243B6B] flex items-center justify-center hover:opacity-90 transition" aria-label="Facebook">
-                            <span class="text-2xl font-black">f</span>
-                        </a>
-                        <a href="#" class="h-14 w-14 rounded-full bg-[#243B6B] flex items-center justify-center hover:opacity-90 transition" aria-label="Email">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="border-t border-white/20">
-                <div class="max-w-7xl mx-auto px-6 lg:px-8 py-4 text-sm text-white/90 flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
+        <footer class="bg-teal-700 text-white mt-20">
+            <div class="max-w-4xl mx-auto px-6 lg:px-8 py-12">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
                     
+                    {{-- Acerca de --}}
+                    <div>
+                        <h3 class="text-lg font-bold mb-3">Dejando Huella</h3>
+                        <p class="text-teal-100 text-sm">
+                            Conectando mascotas con hogares. Una plataforma para adoptar, cuidar y conectar.
+                        </p>
+                    </div>
+
+                    {{-- Links --}}
+                    <div>
+                        <h4 class="font-bold mb-3">Enlaces</h4>
+                        <ul class="space-y-2 text-sm text-teal-100">
+                            <li><a href="/" class="hover:text-white transition">Inicio</a></li>
+                            <li><a href="{{ route('adopciones.form') }}" class="hover:text-white transition">Adopciones</a></li>
+                            <li><a href="{{ route('services.index') }}" class="hover:text-white transition">Servicios Médicos</a></li>
+                        </ul>
+                    </div>
+
+                    {{-- Contacto --}}
+                    <div>
+                        <h4 class="font-bold mb-3">Contacto</h4>
+                        <p class="text-teal-100 text-sm">
+                            ¿Tienes dudas? <br>
+                            <a href="{{ auth()->check() ? route('tickets.index') : route('login') }}" class="text-white hover:underline font-semibold">
+                                Reportar problema
+                            </a>
+                        </p>
+                    </div>
+
+                </div>
+
+                <div class="border-t border-teal-600 pt-6 text-center text-sm text-teal-100">
+                    <p>&copy; {{ date('Y') }} Dejando Huella. Todos los derechos reservados.</p>
                 </div>
             </div>
         </footer>

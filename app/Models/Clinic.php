@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Clinic extends Model
 {
@@ -12,15 +13,31 @@ class Clinic extends Model
 
     public function user()
     {
-        return $this->belongsTo(\App\Models\User::class);
+        $foreignKey = Schema::hasColumn($this->getTable(), 'user_id') ? 'user_id' : 'owner_vet_id';
+
+        return $this->belongsTo(\App\Models\User::class, $foreignKey);
     }
 
 
     public function services()
     {
-        return $this->belongsToMany(MedicalService::class, 'clinic_medical_service')
-            ->withPivot(['price', 'currency', 'duration_minutes', 'is_available'])
-            ->withTimestamps();
+        $pivotTable = Schema::hasTable('clinic_medical_service')
+            ? 'clinic_medical_service'
+            : 'clinic_services';
+
+        $pivotFields = [];
+        foreach (['price', 'currency', 'duration_minutes', 'is_available'] as $column) {
+            if (Schema::hasColumn($pivotTable, $column)) {
+                $pivotFields[] = $column;
+            }
+        }
+
+        $relation = $this->belongsToMany(MedicalService::class, $pivotTable);
+        if (!empty($pivotFields)) {
+            $relation->withPivot($pivotFields);
+        }
+
+        return $relation->withTimestamps();
     }
 
 }
