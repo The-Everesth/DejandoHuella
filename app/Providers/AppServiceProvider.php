@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
+// Cargar helper de nombres de servicios
+require_once app_path('Helpers/ServiceNameHelper.php');
+
 class AppServiceProvider extends ServiceProvider
 {
     /**

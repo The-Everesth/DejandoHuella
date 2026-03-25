@@ -15,13 +15,21 @@ class PetsFirestoreService
     }
 
     /**
+     * Lista todas las mascotas del sistema
+     */
+    public function listAll(): array
+    {
+        return $this->client->listDocs($this->collection);
+    }
+
+    /**
      * Lista mascotas activas por dueño (ownerUid)
      */
+
     public function listByOwner(string $ownerUid): array
     {
         $all = $this->client->listDocs($this->collection);
         Log::info('[PETS] filter', ['ownerUid' => $ownerUid, 'count_all' => count($all)]);
-
         $results = [];
         foreach ($all as $docId => $doc) {
             if (
@@ -33,9 +41,9 @@ class PetsFirestoreService
                 $results[] = $doc;
             }
         }
-
         return $results;
     }
+
 
     /**
      * Obtiene mascota por ID
@@ -93,10 +101,14 @@ class PetsFirestoreService
     /**
      * Actualiza mascota
      */
-    public function updatePet(string $petId, array $data): bool
+    public function updatePet(string $petId, array $fields): void
     {
-        $data['updatedAt'] = now()->toIso8601String();
-        return (bool)$this->client->patchDoc($this->collection, $petId, $data);
+        $fields['updatedAt'] = now();
+        // Solo permitir actualizar campos válidos
+        $allowed = ['photoUrl', 'photoPath', 'updatedAt', 'name', 'age', 'breed', 'description', 'type', 'sex', 'ownerUid'];
+        $filtered = array_intersect_key($fields, array_flip($allowed));
+        \Log::info('[PET] updatePet', ['petId' => $petId, 'fields' => $filtered]);
+        $this->client->patchDoc($this->collection, $petId, $filtered);
     }
 
     /**

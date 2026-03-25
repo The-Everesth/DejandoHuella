@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-bold">Solicitudes de rol pendientes</h2>
         <a class="underline" href="{{ route('admin.users.index') }}">Volver a usuarios</a>
@@ -47,4 +49,4 @@
             <p>No hay solicitudes pendientes.</p>
         @endforelse
     </div>
-</x-app-layout>
+@endsection

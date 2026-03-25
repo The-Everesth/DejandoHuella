@@ -127,9 +127,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('requests.note');
 
     // Citas (ciudadano)
+
     Route::get('/appointments/create/{clinic}/{service}', [AppointmentController::class, 'create'])->name('appointments.create');
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
     Route::get('/my/appointments', [AppointmentController::class, 'myAppointments'])->name('my.appointments');
+
+    // Ver detalle de cita
+    Route::get('/my/appointments/{appointment}', [AppointmentController::class, 'show'])->name('my.appointments.show');
+    // Cancelar cita
+    Route::post('/my/appointments/{appointment}/cancel', [AppointmentController::class, 'cancel'])->name('my.appointments.cancel');
+    // Reagendar cita
+    Route::get('/my/appointments/{appointment}/reschedule', [AppointmentController::class, 'rescheduleForm'])->name('my.appointments.reschedule.form');
+    Route::post('/my/appointments/{appointment}/reschedule', [AppointmentController::class, 'reschedule'])->name('my.appointments.reschedule');
 
     // Tickets (usuario)
     Route::get('/tickets', [SupportTicketController::class, 'index'])->name('tickets.index');
@@ -161,8 +170,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('/adoptions/{adoptionId}/visibility', [AdoptionModerationController::class, 'updateVisibility'])
                 ->name('adoptions.visibility.update');
 
-
-
             // Servicios médicos CRUD
             Route::resource('services', MedicalServiceController::class)->parameters(['services' => 'service']);
 
@@ -188,6 +195,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('appointments', [AppointmentController::class, 'vetAppointments'])->name('appointments.index');
             Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'setStatus'])->name('appointments.status');
+            Route::patch('appointments/{appointment}/note', [AppointmentController::class, 'saveVetNote'])->name('appointments.note');
 
             Route::delete('/users/{user}', [UserRoleController::class, 'destroy'])->name('users.destroy');
 

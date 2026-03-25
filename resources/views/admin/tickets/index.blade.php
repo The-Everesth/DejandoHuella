@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
     <x-page-title title="Tickets" subtitle="Mensajes enviados por usuarios." />
 
     <x-card class="mb-4">
@@ -152,4 +154,4 @@
             {{ $tickets->links() }}
         </div>
     </x-card>
-</x-app-layout>
+@endsection

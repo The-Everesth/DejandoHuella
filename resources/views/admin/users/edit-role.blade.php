@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
     <h2 class="text-xl font-bold mb-4">Cambiar rol</h2>
 
     <div class="p-4 border rounded mb-4">
@@ -33,4 +35,4 @@
         <button class="border rounded px-4 py-2">Guardar</button>
         <a class="underline ml-3" href="{{ route('admin.users.index') }}">Volver</a>
     </form>
-</x-app-layout>
+@endsection

@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
     <h2 class="text-xl font-bold mb-4">Servicios Médicos</h2>
     <a class="underline" href="{{ route('admin.services.create') }}">Crear servicio</a>
 
@@ -18,4 +20,4 @@
             </div>
         @endforeach
     </div>
-</x-app-layout>
+@endsection

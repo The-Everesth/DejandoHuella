@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
     <x-page-title
         title="Gestión de adopciones"
         subtitle="Modera las publicaciones visibles de refugios y veterinarias."
@@ -271,4 +273,4 @@
             });
         })();
     </script>
-</x-app-layout>
+@endsection

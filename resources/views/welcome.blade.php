@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
     <x-slot name="header">
         <h1 class="text-3xl font-bold text-gray-900">Bienvenido a Dejando Huella</h1>
         <p class="text-gray-600 mt-2">Portal de adopción y servicios para el cuidado animal.</p>
@@ -25,4 +27,4 @@
             @endauth
         </div>
     </div>
-</x-app-layout>
+@endsection
