@@ -82,14 +82,15 @@ class ClinicsFirestoreService
         foreach ($all as $clinic) {
             if (isset($clinic['published']) && $clinic['published'] === true) {
                 if ($serviceId) {
-                    $services = $clinic['services'] ?? [];
-                    if (! in_array($serviceId, $services)) {
+                    $services = $clinic['serviceIds'] ?? ($clinic['services'] ?? []);
+                    if (! is_array($services) || ! in_array($serviceId, $services, true)) {
                         continue;
                     }
                 }
                 if ($q) {
                     $name = mb_strtolower($clinic['name'] ?? '');
-                    if (strpos($name, $q) === false) {
+                    $address = mb_strtolower(($clinic['address'] ?? '').' '.($clinic['address_line'] ?? ''));
+                    if (strpos($name, $q) === false && strpos($address, $q) === false) {
                         continue;
                     }
                 }

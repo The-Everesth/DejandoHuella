@@ -1,25 +1,23 @@
 <nav x-data="{ open: false }" class="bg-teal-700 text-black">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="h-16 flex items-center justify-between">
+        <div class="h-24 flex items-center justify-between">
 
             <!-- Logo -->
-            <div class="flex items-center gap-3">
-                <a href="{{ url('/') }}" class="flex items-center gap-2">
-                    {{-- Si tienes logo real, reemplaza este svg por <img> --}}
-                    <span class="inline-flex items-center justify-center h-10 w-10 rounded-full bg-white/10">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 10.5c1.38 0 2.5-1.12 2.5-2.5S13.38 5.5 12 5.5 9.5 6.62 9.5 8s1.12 2.5 2.5 2.5z"/>
-                            <path d="M12 12c-3.31 0-6 2.69-6 6h2a4 4 0 018 0h2c0-3.31-2.69-6-6-6z"/>
-                        </svg>
+            <div class="flex items-center gap-4">
+                <a href="{{ url('/') }}" class="flex items-center gap-3 hover:opacity-90 transition">
+                    {{-- Logo real del proyecto --}}
+                    <span class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-white/80 hover:bg-white/90 transition overflow-hidden border-2 border-white shadow-sm">
+                        <img src="/img/logo-dejandohuella.png" alt="Logo Dejando Huella" style="width:64px;height:64px;" />
                     </span>
-                    <span class="font-extrabold tracking-wide leading-none">
+                    </span>
+                    <span class="font-extrabold tracking-wider leading-none text-lg">
                         DEJANDO<br>HUELLA
                     </span>
                 </a>
             </div>
 
             <!-- Desktop Links -->
-            <div class="hidden md:flex items-center gap-8 font-semibold text-lg">
+            <div class="hidden md:flex items-center gap-8 font-semibold text-xl">
                 <a href="{{ url('/') }}" class="hover:text-white/80 transition">Inicio</a>
 
                 {{-- Ajusta estas rutas a las tuyas reales --}}
