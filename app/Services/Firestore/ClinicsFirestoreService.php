@@ -119,6 +119,7 @@ class ClinicsFirestoreService
             'website' => $clinic->website,
             'is_public' => (bool)$clinic->is_public,
             'userId' => $clinic->user_id,
+            'ownerUserId' => $clinic->user_id, // Asegura compatibilidad con el filtro del dashboard
             'createdAt' => $clinic->created_at?->toIso8601String(),
             'updatedAt' => now()->toIso8601String(),
         ];
