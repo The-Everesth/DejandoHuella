@@ -95,9 +95,7 @@ Route::get('/clinics/{clinic}', [ClinicsController::class, 'publicShow'])
 // AUTH + VERIFIED (todo lo interno)
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
     // Perfil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
