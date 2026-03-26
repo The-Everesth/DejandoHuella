@@ -254,6 +254,11 @@ class AdoptionsController extends Controller
 
         $validated = $request->validate([
             'status' => 'required|string|in:aprobada,rechazada',
+            'reviewerNote' => 'required|string|max:1000',
+        ], [
+            'reviewerNote.required' => 'Debes agregar una nota antes de confirmar o rechazar la solicitud.',
+            'reviewerNote.string' => 'La nota debe ser un texto.',
+            'reviewerNote.max' => 'La nota no puede exceder 1000 caracteres.',
         ]);
 
         $solicitud = $this->adoptionRequests->get($requestId);
@@ -283,6 +288,9 @@ class AdoptionsController extends Controller
         $this->adoptionRequests->setStatus($requestId, (string) $validated['status'], [
             'reviewedAt' => now()->toIso8601String(),
             'reviewedBy' => $user ? (int) $user->id : null,
+            'reviewerNote' => trim((string) $validated['reviewerNote']),
+            'reviewerNoteAt' => now()->toIso8601String(),
+            'reviewerNoteBy' => $user ? (int) $user->id : null,
         ]);
 
         $statusLabel = $validated['status'] === 'aprobada' ? 'aprobada' : 'rechazada';

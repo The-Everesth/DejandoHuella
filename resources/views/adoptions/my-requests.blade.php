@@ -51,46 +51,90 @@
                 }
             @endphp
 
-            <div class="p-4 border rounded bg-white">
-                <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div class="font-semibold">
-                        Mascota: {{ $item['petName'] ?? 'Sin nombre' }}
-                    </div>
-
-                    <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold {{ $statusClasses }}">
-                            {{ $statusLabel }}
-                        </span>
-
-                        @if($requestId !== '' && $isPending)
-                            <form
-                                method="POST"
-                                action="{{ route('my.requests.cancel', ['requestId' => $requestId]) }}"
-                                class="cancel-my-request-form"
-                                data-pet-name="{{ e((string) ($item['petName'] ?? 'Sin nombre')) }}"
-                            >
-                                @csrf
-                                @method('PATCH')
-                                <button
-                                    type="submit"
-                                    class="inline-flex items-center rounded-full border border-red-300 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-100"
-                                >
-                                    Cancelar
-                                </button>
-                            </form>
+            <div class="bg-white rounded-2xl shadow-md border border-gray-100 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                    <div class="flex-shrink-0 flex items-center justify-center w-14 h-14 rounded-full border"
+                        style="
+                            @if($isApproved) background-color: #e6f9f0; border-color: #34d399; @endif
+                            @if($isRejected) background-color: #fef2f2; border-color: #f87171; @endif
+                            @if($isPending) background-color: #fef9e6; border-color: #fbbf24; @endif
+                        "
+                    >
+                        @if($isApproved)
+                            <!-- Palomita verde -->
+                            <svg class="w-8 h-8 text-green-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" />
+                                <path d="M8 12.5l3 3 5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                            </svg>
+                        @elseif($isRejected)
+                            <!-- Tachita roja -->
+                            <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" />
+                                <path d="M9 9l6 6M15 9l-6 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+                            </svg>
+                        @elseif($isPending)
+                            <!-- Reloj amarillo -->
+                            <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" />
+                                <path d="M12 7v5l3 3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+                            </svg>
+                        @else
+                            <!-- Icono neutro -->
+                            <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" />
+                            </svg>
                         @endif
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg font-bold text-gray-800 truncate">{{ $item['petName'] ?? 'Sin nombre' }}</span>
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold {{ $statusClasses }}">
+                                {{ $statusLabel }}
+                            </span>
+                        </div>
+                        <div class="text-sm text-gray-500 mt-1 truncate">
+                            @if(!empty($item['petType']))
+                                <span class="capitalize">{{ $item['petType'] }}</span>
+                            @endif
+                            @if(!empty($item['petSex']))
+                                <span>• {{ ucfirst($item['petSex']) }}</span>
+                            @endif
+                        </div>
                     </div>
                 </div>
-
-                @if($reviewerNote !== '')
-                    <div class="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900">
-                        <p class="font-semibold">Nota de la veterinaria/refugio</p>
-                        <p class="mt-1 whitespace-pre-line">{{ $reviewerNote }}</p>
-                        @if($reviewerNoteAtLabel !== '')
-                            <p class="mt-1 text-xs text-blue-700">Actualizada: {{ $reviewerNoteAtLabel }}</p>
-                        @endif
-                    </div>
-                @endif
+                <div class="flex flex-col gap-2 md:items-end md:text-right">
+                    @if($reviewerNote !== '')
+                        <div class="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm text-blue-900 max-w-md">
+                            <div class="font-semibold mb-1 flex items-center gap-1">
+                                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h8M8 16h8M8 8h8" />
+                                </svg>
+                                Nota de la veterinaria/refugio
+                            </div>
+                            <div class="whitespace-pre-line">{{ $reviewerNote }}</div>
+                            @if($reviewerNoteAtLabel !== '')
+                                <div class="mt-1 text-xs text-blue-700">Actualizada: {{ $reviewerNoteAtLabel }}</div>
+                            @endif
+                        </div>
+                    @endif
+                    @if($requestId !== '' && $isPending)
+                        <form
+                            method="POST"
+                            action="{{ route('my.requests.cancel', ['requestId' => $requestId]) }}"
+                            class="cancel-my-request-form"
+                            data-pet-name="{{ e((string) ($item['petName'] ?? 'Sin nombre')) }}"
+                        >
+                            @csrf
+                            @method('PATCH')
+                            <button
+                                type="submit"
+                                class="inline-flex items-center rounded-full border border-red-300 bg-red-50 px-4 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-100 mt-2 md:mt-0"
+                            >
+                                Cancelar
+                            </button>
+                        </form>
+                    @endif
+                </div>
             </div>
         @empty
             <div class="p-4 border rounded bg-white text-gray-600">

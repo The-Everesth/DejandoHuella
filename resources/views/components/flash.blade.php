@@ -12,11 +12,16 @@
     </script>
 @endif
 
-@if($errors->any())
+@php
+    $filteredErrors = collect($errors->all())->filter(function($e) {
+        return $e !== 'Debes agregar una nota antes de confirmar o rechazar la solicitud.';
+    });
+@endphp
+@if($filteredErrors->count())
     <div class="mb-4 p-3 border rounded-xl">
         <div class="font-semibold mb-2">Revisa lo siguiente:</div>
         <ul class="list-disc ml-5 space-y-1">
-            @foreach($errors->all() as $e)
+            @foreach($filteredErrors as $e)
                 <li>{{ $e }}</li>
             @endforeach
         </ul>
