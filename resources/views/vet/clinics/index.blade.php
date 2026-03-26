@@ -11,17 +11,17 @@
             @foreach($clinics as $c)
                 <div class="bg-white rounded-lg shadow p-6 flex flex-col justify-between">
                     <div>
-                        <h3 class="text-xl font-semibold text-gray-900">{{ $c->name }}</h3>
-                        @if($c->address_line || $c->city || $c->state)
+                        <h3 class="text-xl font-semibold text-gray-900">{{ $c['name'] ?? 'Sin nombre' }}</h3>
+                        @if(!empty($c['address']))
                             <p class="text-gray-600 text-sm mt-1">
-                                {{ $c->address_line }}@if($c->address_line && ($c->city||$c->state)), @endif{{ $c->city }}@if($c->city && $c->state), @endif{{ $c->state }}
+                                {{ $c['address'] }}
                             </p>
                         @endif
-                        @if($c->phone)
-                            <p class="text-gray-600 text-sm mt-1">Tel: {{ $c->phone }}</p>
+                        @if(!empty($c['phone']))
+                            <p class="text-gray-600 text-sm mt-1">Tel: {{ $c['phone'] }}</p>
                         @endif
                         <p class="text-sm mt-2">
-                            @if($c->is_public)
+                            @if(!empty($c['is_public']))
                                 <span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">Activa</span>
                             @else
                                 <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded-full">Privada</span>
@@ -29,9 +29,9 @@
                         </p>
                     </div>
                     <div class="mt-4 flex flex-wrap gap-2">
-                        <a href="{{ route('vet.clinics.edit', $c) }}" class="flex-1 bg-teal-500 text-white text-center px-3 py-2 rounded hover:bg-teal-600 transition">Ver / Editar</a>
-                        <a href="{{ route('vet.clinics.services.edit', ['clinic' => 'c_' . $c->id]) }}" class="flex-1 bg-blue-500 text-white text-center px-3 py-2 rounded hover:bg-blue-600 transition">Servicios</a>
-                        <form method="POST" action="{{ route('vet.clinics.destroy', $c) }}" onsubmit="return confirm('¿Seguro que deseas eliminar esta clínica?');" class="flex-1">
+                        <a href="{{ route('vet.clinics.edit', $c['id'] ?? $loop->index) }}" class="flex-1 bg-teal-500 text-white text-center px-3 py-2 rounded hover:bg-teal-600 transition">Ver / Editar</a>
+                        <a href="{{ route('vet.clinics.services.edit', ['clinic' => $c['id'] ?? $loop->index]) }}" class="flex-1 bg-blue-500 text-white text-center px-3 py-2 rounded hover:bg-blue-600 transition">Servicios</a>
+                        <form method="POST" action="{{ route('vet.clinics.destroy', $c['id'] ?? $loop->index) }}" onsubmit="return confirm('¿Seguro que deseas eliminar esta clínica?');" class="flex-1">
                             @csrf @method('DELETE')
                             <button type="submit" class="w-full bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700 transition">
                                 Eliminar
