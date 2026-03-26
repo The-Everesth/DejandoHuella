@@ -345,13 +345,35 @@ class AppointmentController extends Controller
         $pets = $petsFirestore->listAll();
         // Para clientes, si tienes userName directo en la cita úsalo, si no, puedes mapearlo aquí si tienes acceso
 
-        $appointments = $appointments->map(function($a) use ($services, $clinics, $pets) {
+        // Obtener todos los usuarios para mapear userUid a nombre
+        $usersFirestore = app(\App\Services\Firestore\UsersFirestoreService::class);
+        $users = collect($usersFirestore->list());
+
+        $appointments = $appointments->map(function($a) use ($services, $clinics, $pets, $users) {
             $a = (object)$a;
             $a->serviceName = $services[$a->serviceId]['name'] ?? $a->serviceId ?? '';
             $a->clinicName = $clinics[$a->clinicId]['name'] ?? $a->clinicId ?? '';
             $a->petName = $a->petName ?? ($pets[$a->petId]['name'] ?? $a->petId ?? '');
-            // userName: si existe en el objeto, úsalo; si no, deja el UID
-            $a->userName = $a->userName ?? $a->userUid ?? '';
+            // userName: si existe en el objeto, úsalo; si no, busca el nombre real en Firestore
+            if (!empty($a->userName)) {
+                // ya tiene nombre
+            } elseif (!empty($a->userUid)) {
+                $user = $users->first(function($u) use ($a) {
+                    return ($u['id'] ?? $u['uid'] ?? $u['userUid'] ?? $u['user_id'] ?? null) == $a->userUid;
+                });
+                $a->userName = $user['name'] ?? $a->userUid;
+            } else {
+                $a->userName = 'Cliente';
+            }
+            // Traducir estado a español
+            $statusMap = [
+                'PENDING' => 'Pendiente',
+                'CONFIRMED' => 'Confirmada',
+                'REJECTED' => 'Rechazada',
+                'CANCELLED' => 'Cancelada',
+                'COMPLETED' => 'Finalizada',
+            ];
+            $a->statusLabel = $statusMap[strtoupper($a->status ?? '')] ?? ucfirst(strtolower($a->status ?? 'Pendiente'));
             return $a;
         });
 

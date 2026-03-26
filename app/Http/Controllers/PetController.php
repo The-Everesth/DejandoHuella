@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 use App\Services\Firestore\PetsFirestoreService;
+use App\Services\CloudinaryService;
 use Illuminate\Support\Facades\Log;
 
 
@@ -54,27 +55,20 @@ class PetController extends Controller
         $photoFile = $request->file('photo');
         unset($data['photo']); // Nunca guardar la ruta temporal
 
-        $svc = app(\App\Services\Firestore\PetsFirestoreService::class);
+        $svc = app(PetsFirestoreService::class);
         $pet = $svc->createPet($data);
         $petId = $pet['id'] ?? null;
 
-        // Guardar la foto si existe
+        // Subir la foto a Cloudinary si existe
         if ($photoFile && $photoFile->isValid()) {
-            $directory = public_path('uploads/pets');
-            if (!is_dir($directory)) {
-                mkdir($directory, 0755, true);
+            $cloudinary = app(CloudinaryService::class);
+            $secureUrl = $cloudinary->uploadImage($photoFile, 'pets');
+            if ($secureUrl) {
+                $svc->updatePet($petId, [
+                    'photoUrl' => $secureUrl,
+                    'photoPath' => null, // Limpiar referencia local
+                ]);
             }
-            $filename = \Illuminate\Support\Str::uuid()->toString() . '.' . $photoFile->getClientOriginalExtension();
-            $photoFile->move($directory, $filename);
-
-            $photoPath = 'uploads/pets/' . $filename;
-            $photoUrl = url($photoPath);
-
-            // Actualizar Firestore con las rutas de la foto
-            $svc->updatePet($petId, [
-                'photoPath' => $photoPath,
-                'photoUrl' => $photoUrl,
-            ]);
         }
 
         return redirect()->route('my.pets')->with('success', 'Mascota registrada.');
@@ -115,23 +109,16 @@ class PetController extends Controller
 
         $svc->updatePet($pet, $data);
 
-        // Guardar la foto si existe
+        // Subir la foto a Cloudinary si existe
         if ($photoFile && $photoFile->isValid()) {
-            $directory = public_path('uploads/pets');
-            if (!is_dir($directory)) {
-                mkdir($directory, 0755, true);
+            $cloudinary = app(CloudinaryService::class);
+            $secureUrl = $cloudinary->uploadImage($photoFile, 'pets');
+            if ($secureUrl) {
+                $svc->updatePet($pet, [
+                    'photoUrl' => $secureUrl,
+                    'photoPath' => null, // Limpiar referencia local
+                ]);
             }
-            $filename = \Illuminate\Support\Str::uuid()->toString() . '.' . $photoFile->getClientOriginalExtension();
-            $photoFile->move($directory, $filename);
-
-            $photoPath = 'uploads/pets/' . $filename;
-            $photoUrl = url($photoPath);
-
-            // Actualizar Firestore con las rutas de la foto
-            $svc->updatePet($pet, [
-                'photoPath' => $photoPath,
-                'photoUrl' => $photoUrl,
-            ]);
         }
 
         return redirect()->route('my.pets')->with('success', 'Mascota actualizada correctamente.');

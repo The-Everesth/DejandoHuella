@@ -16,6 +16,24 @@ class UsersFirestoreService
     }
 
     /**
+     * Actualiza campos específicos del usuario en Firestore (PATCH parcial).
+     */
+    public function updateUserFields(string $docId, array $fields): bool
+    {
+        try {
+            $this->client->patchDoc($this->collection, $docId, $fields);
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('Error actualizando campos de usuario en Firestore', [
+                'docId' => $docId,
+                'fields' => $fields,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
      * Sincroniza un usuario de Laravel a Firestore.
      * Idempotente: si existe, hace PATCH; si no, CREATE.
      */
@@ -28,7 +46,6 @@ class UsersFirestoreService
                 'laravelUserId'  => $user->id,
                 'name'           => $user->name,
                 'email'          => $user->email,
-                'profilePhotoPath' => $user->profile_photo_path,
                 'profilePhotoUrl'  => $user->profile_photo_url,
                 'role'           => $this->getRole($user),
                 'status'         => $user->status ?? 'active',
@@ -64,12 +81,12 @@ class UsersFirestoreService
         }
     }
 
+
     /**
-     * Obtiene un usuario desde Firestore por Laravel ID.
+     * Obtiene un usuario desde Firestore por docId (ID real de Firestore).
      */
-    public function getUser(int $laravelUserId): ?array
+    public function getUserByDocId(string $docId): ?array
     {
-        $docId = $this->getUserDocId($laravelUserId);
         return $this->client->getDoc($this->collection, $docId);
     }
 
@@ -93,9 +110,19 @@ class UsersFirestoreService
     /**
      * Convierte el ID de Laravel al ID de documento Firestore.
      */
-    protected function getUserDocId(int $laravelUserId): string
+    /**
+     * Devuelve el docId real de Firestore para un usuario.
+     * Si el ID ya es string (autogenerado por Firestore), lo retorna tal cual.
+     * Si es numérico, retorna u_# para compatibilidad.
+     */
+    public function getUserDocId($userId): string
     {
-        return "u_{$laravelUserId}";
+        if (is_string($userId) && !preg_match('/^\d+$/', $userId)) {
+            // ID Firestore autogenerado (alfanumérico largo)
+            return $userId;
+        }
+        // Si es numérico, usar formato u_#
+        return "u_{$userId}";
     }
 
     /**

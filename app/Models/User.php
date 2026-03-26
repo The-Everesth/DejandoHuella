@@ -2,117 +2,62 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
-use App\Services\Firestore\FirestoreUserRoleService;
-use App\Models\Pet;
-use App\Models\AdoptionPost;
-use App\Models\AdoptionRequest;
-
-use App\Models\Clinic;
-use App\Models\VeterinarianProfile;
-use App\Models\Appointment;
-
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use App\Services\Firestore\UsersFirestoreService;
+use App\Services\Firestore\FirestoreUserRoleService;
 
-
-class User extends Authenticatable
+/**
+ * User DTO/helper for Firestore-only users.
+ * No Eloquent, no Authenticatable.
+ */
+class User
 {
-    use HasApiTokens, HasFactory, Notifiable;
-    use SoftDeletes;
-
-    public function pets()
+    public $id;
+    // Permite acceder a accessors como propiedades ($user->profile_initials)
+    public function __get($key)
     {
-        return $this->hasMany(Pet::class, 'owner_id');
+        $method = 'get' . Str::studly($key) . 'Attribute';
+        if (method_exists($this, $method)) {
+            return $this->{$method}();
+        }
+        if (property_exists($this, $key)) {
+            return $this->$key;
+        }
+        return null;
     }
+    public $name;
+    public $email;
+    public $profile_photo_url;
+    public $status;
+    public $role;
+    public $created_at;
+    public $updated_at;
+    public $requested_role;
+    public $role_request_status;
+    public $role_requested_at;
+    public $role_reviewed_at;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
-    protected $fillable = [
-        'name',
-        'email',
-        'profile_photo_path',
-        'password',
-    ];
-
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
-
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-        'password' => 'hashed',
-    ];
-
-    public function adoptionPosts()
+    public function __construct(array $data = [])
     {
-        return $this->hasMany(AdoptionPost::class, 'created_by');
-    }
-
-    public function adoptionRequests()
-    {
-        return $this->hasMany(AdoptionRequest::class, 'applicant_id');
+        foreach ($data as $key => $value) {
+            $this->$key = $value;
+        }
     }
 
 
-    public function veterinarianProfile()
+    // Métodos de roles (delegan a FirestoreUserRoleService, compatible con IDs automáticos y user_code)
+    public function hasRole($roles): bool
     {
-        return $this->hasOne(VeterinarianProfile::class);
+        return app(FirestoreUserRoleService::class)->hasRoleByUser($this, $roles);
     }
-
-    public function clinics()
-    {
-        return $this->hasMany(Clinic::class, 'user_id');
-    }
-
-    public function appointmentsAsOwner()
-    {
-        return $this->hasMany(Appointment::class, 'owner_id');
-    }
-
-    public function appointmentsAsVet()
-    {
-        return $this->hasMany(Appointment::class, 'vet_id');
-    }
-
-    public function supportTickets()
-    {
-        return $this->hasMany(\App\Models\SupportTicket::class);
-    }
-
-    public function hasRole($roles, $guard = null): bool
-    {
-        return app(FirestoreUserRoleService::class)->hasRoleByLaravelUserId((int) $this->id, $roles);
-    }
-
     public function hasAnyRole(...$roles): bool
     {
         return $this->hasRole($roles);
     }
-
     public function getRoleNames()
     {
-        return collect(app(FirestoreUserRoleService::class)->getRolesByLaravelUserId((int) $this->id));
+        return collect(app(FirestoreUserRoleService::class)->getRolesByUser($this));
     }
-
     public function assignRole(...$roles)
     {
         $role = $this->firstRoleFromInput($roles);
@@ -121,7 +66,6 @@ class User extends Authenticatable
         }
         return $this;
     }
-
     public function syncRoles($roles)
     {
         $role = $this->firstRoleFromInput($roles);
@@ -130,11 +74,9 @@ class User extends Authenticatable
         }
         return $this;
     }
-
     protected function firstRoleFromInput($roles): ?string
     {
         $flattened = [];
-
         if (is_array($roles)) {
             foreach ($roles as $role) {
                 if (is_array($role)) {
@@ -148,24 +90,20 @@ class User extends Authenticatable
         } else {
             $flattened[] = $roles;
         }
-
         foreach ($flattened as $role) {
             if (is_string($role) && trim($role) !== '') {
                 return strtolower(trim($role));
             }
         }
-
         return null;
     }
 
+
     public function getProfilePhotoUrlAttribute(): ?string
     {
-        if (! $this->profile_photo_path) {
-            return null;
-        }
-
-        return asset($this->profile_photo_path);
+        return !empty($this->profile_photo_url) ? $this->profile_photo_url : null;
     }
+
 
     public function getProfileInitialsAttribute(): string
     {
@@ -176,7 +114,6 @@ class User extends Authenticatable
             ->take(2)
             ->map(fn (string $segment) => Str::upper(Str::substr($segment, 0, 1)))
             ->implode('');
-
         return $initials !== '' ? $initials : 'U';
     }
 

@@ -13,46 +13,67 @@ class FirestoreUserRoleService
         $this->client = $client;
     }
 
-    public function getUserDocByLaravelUserId(int $laravelUserId): ?array
+
+    /**
+     * Obtiene el documento de usuario compatible con IDs automáticos y antiguos.
+     * Si el usuario tiene user_code, busca por ese campo; si no, por el document ID real.
+     */
+    public function getUserDocFlexible($user): ?array
     {
-        $docId = 'u_'.$laravelUserId;
-        return $this->client->getDoc('users', $docId);
+        // Si el usuario tiene user_code, buscar por ese campo
+        if (isset($user->user_code)) {
+            $users = $this->client->listDocs('users');
+            foreach ($users as $doc) {
+                if (isset($doc['user_code']) && $doc['user_code'] === $user->user_code) {
+                    return $doc;
+                }
+            }
+        }
+        // Si no, buscar por el document ID real
+        if (isset($user->id)) {
+            $doc = $this->client->getDoc('users', (string)$user->id);
+            if ($doc) return $doc;
+        }
+        // Fallback: buscar por u_# para compatibilidad
+        if (isset($user->laravelUserId)) {
+            $docId = 'u_' . $user->laravelUserId;
+            $doc = $this->client->getDoc('users', $docId);
+            if ($doc) return $doc;
+        }
+        return null;
     }
 
-    public function getRolesByLaravelUserId(int $laravelUserId): array
+    /**
+     * Obtiene los roles del usuario autenticado (flexible para ambos tipos de ID).
+     */
+    public function getRolesByUser($user): array
     {
-        $doc = $this->getUserDocByLaravelUserId($laravelUserId);
+        $doc = $this->getUserDocFlexible($user);
         if (! $doc) {
             return [];
         }
-
         $roles = [];
-
         if (isset($doc['role']) && is_string($doc['role']) && trim($doc['role']) !== '') {
             $roles[] = strtolower(trim($doc['role']));
         }
-
         return array_values(array_unique($roles));
     }
 
-    public function hasRoleByLaravelUserId(int $laravelUserId, $requestedRoles): bool
+    public function hasRoleByUser($user, $requestedRoles): bool
     {
-        $userRoles = $this->getRolesByLaravelUserId($laravelUserId);
+        $userRoles = $this->getRolesByUser($user);
         if (empty($userRoles)) {
             return false;
         }
-
         $normalizedRequested = $this->normalizeRequestedRoles($requestedRoles);
         if (empty($normalizedRequested)) {
             return false;
         }
-
         foreach ($normalizedRequested as $role) {
             if (in_array($role, $userRoles, true)) {
                 return true;
             }
         }
-
         return false;
     }
 

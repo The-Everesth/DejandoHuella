@@ -6,12 +6,45 @@ use GuzzleHttp\Client as GuzzleClient;
 use Google\Auth\Credentials\ServiceAccountCredentials;
 use Illuminate\Support\Facades\Log;
 
-class FirestoreRestClient
-{
+class FirestoreRestClient{
+    /**
+     * Crea un documento en Firestore. Si $docId es null, Firestore autogenera el ID.
+     * @param string $collection Nombre de la colección
+     * @param string|null $docId ID del documento (o null para autogenerado)
+     * @param array $data Datos del documento
+     * @return array Respuesta de Firestore
+     */
+    public function createDoc(string $collection, ?string $docId, array $data): array
+    {
+        if ($docId) {
+            // Crear documento con ID específico
+            return $this->createDocument($collection, $docId, $data);
+        } else {
+            // Crear documento con ID autogenerado
+            $url = $this->baseUrl().'/'.$collection;
+            $body = ['fields' => $this->phpToFields($data)];
+            return $this->request('POST', $url, ['json' => $body]);
+        }
+    }
+
     protected string $projectId;
     protected string $serviceAccountPath;
     protected GuzzleClient $http;
     protected ?array $token = null;
+
+    /**
+     * Parchea (actualiza parcialmente) un documento Firestore.
+     * @param string $collection Nombre de la colección
+     * @param string $docId ID del documento
+     * @param array $fields Campos a actualizar
+     * @return array Respuesta de Firestore
+     */
+    public function patchDoc(string $collection, string $docId, array $fields): array
+    {
+        $documentPath = $collection . '/' . $docId;
+        $updateMaskFields = array_keys($fields);
+        return $this->patchDocument($documentPath, $fields, $updateMaskFields);
+    }
 
     public function __construct()
     {
@@ -360,77 +393,8 @@ class FirestoreRestClient
         return $out;
     }
 
-    public function createDoc(string $collection, ?string $id, array $data): array
-    {
-        if ($id) {
-            // upsert: patchDoc checks existence and crea si falta
-            $this->patchDoc($collection, $id, $data);
-            return $this->getDoc($collection, $id) ?? [];
-        }
-
-        $url = $this->baseUrl().'/'.$this->encodePath($collection);
-        $body = ['fields' => $this->phpToFields($data)];
-        $payload = $this->request('POST', $url, ['json' => $body]);
-        return $this->fromFirestoreDocument($payload);
-    }
-
-    public function patchDoc(string $collection, string $id, array $data): bool
-    {
-        $existing = $this->getDoc($collection, $id);
-        $fields = array_keys($data);
         
-        if (is_null($existing)) {
-            // Document does not exist, attempt CREATE
-            Log::info('FirestoreRestClient::patchDoc() - Document does not exist, attempting CREATE', [
-                'collection' => $collection,
-                'id' => $id,
-            ]);
-            
-            try {
-                $this->createDocument($collection, $id, $data);
-                Log::info('FirestoreRestClient::patchDoc() - Document created successfully', [
-                    'collection' => $collection,
-                    'id' => $id,
-                ]);
-                return true;
-            } catch (\GuzzleHttp\Exception\ClientException $e) {
-                // If we get 409 Conflict, document exists (race condition)
-                // Fall through to PATCH instead
-                if ($e->getResponse() && $e->getResponse()->getStatusCode() === 409) {
-                    Log::warning('FirestoreRestClient::patchDoc() - CREATE returned 409 Conflict (doc exists), falling back to PATCH', [
-                        'collection' => $collection,
-                        'id' => $id,
-                    ]);
-                } else {
-                    throw $e;
-                }
-            }
-        }
-        
-        // Document exists or we need to PATCH as fallback (409 race condition)
-        Log::info('FirestoreRestClient::patchDoc() - Document exists, patching', [
-            'collection' => $collection,
-            'id' => $id,
-            'fieldsToUpdate' => $fields,
-        ]);
-        
-        try {
-            $result = $this->patchDocument("{$collection}/{$id}", $data, $fields);
-            Log::info('FirestoreRestClient::patchDoc() - PATCH completed successfully', [
-                'collection' => $collection,
-                'id' => $id,
-            ]);
-            return true;
-        } catch (\Throwable $e) {
-            Log::error('FirestoreRestClient::patchDoc() - PATCH failed', [
-                'collection' => $collection,
-                'id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            throw $e;
-        }
-    }
+               
 
     public function deleteDoc(string $collection, string $id): bool
     {

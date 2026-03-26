@@ -27,6 +27,9 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Registrar el provider personalizado 'firestore'
+        \Illuminate\Support\Facades\Auth::provider('firestore', function ($app, array $config) {
+            return new \App\Auth\FirestoreUserProvider($app->make(\App\Services\Firestore\UsersFirestoreService::class));
+        });
     }
 }

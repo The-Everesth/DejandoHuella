@@ -72,31 +72,6 @@ class AdoptionRequestsFirestoreService
     }
 
     /**
-     * Lista todas las solicitudes de adopcion realizadas por un usuario.
-     */
-    public function listByApplicant(int $applicantId): array
-    {
-        $all = $this->client->listDocs($this->collection);
-        $results = [];
-
-        foreach ($all as $docId => $doc) {
-            if ((string) ($doc['applicantId'] ?? '') !== (string) $applicantId) {
-                continue;
-            }
-
-            if (empty($doc['id'])) {
-                $doc['id'] = $docId;
-            }
-
-            $results[] = $doc;
-        }
-
-        $this->sortNewestFirst($results);
-
-        return $results;
-    }
-
-    /**
      * Lista solicitudes de adopcion asociadas a publicaciones especificas.
      *
      * @param  array<int, string>  $adoptionIds
@@ -107,30 +82,36 @@ class AdoptionRequestsFirestoreService
             array_map(static fn ($id): string => trim((string) $id), $adoptionIds),
             static fn (string $id): bool => $id !== ''
         )));
-
-        if (empty($normalizedIds)) {
-            return [];
-        }
-
-        $lookup = array_fill_keys($normalizedIds, true);
         $all = $this->client->listDocs($this->collection);
         $results = [];
+        foreach ($all as $doc) {
+            if (isset($doc['adoptionId']) && in_array((string)$doc['adoptionId'], $normalizedIds, true)) {
+                $results[] = $doc;
+            }
+        }
+        $this->sortNewestFirst($results);
+        return $results;
+    }
 
+    /**
+     * Lista todas las solicitudes de adopcion realizadas por un usuario.
+     * Permite string o int como ID para soportar Firestore IDs autogenerados.
+     */
+    public function listByApplicant($applicantId): array
+    {
+
+        $all = $this->client->listDocs($this->collection);
+        $results = [];
         foreach ($all as $docId => $doc) {
-            $adoptionId = (string) ($doc['adoptionId'] ?? '');
-            if ($adoptionId === '' || ! isset($lookup[$adoptionId])) {
+            if ((string) ($doc['applicantId'] ?? '') !== (string) $applicantId) {
                 continue;
             }
-
             if (empty($doc['id'])) {
                 $doc['id'] = $docId;
             }
-
             $results[] = $doc;
         }
-
         $this->sortNewestFirst($results);
-
         return $results;
     }
 
@@ -158,3 +139,4 @@ class AdoptionRequestsFirestoreService
         return 'req_'.$safeAdoptionId.'_u_'.$applicantId;
     }
 }
+

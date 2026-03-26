@@ -56,8 +56,18 @@ class ClinicsController extends Controller
         }
 
         // intentar enlazar usuario si el documento incluye algún ID mysql
+
+        // Instancia el servicio para buscar usuarios en Firestore
+        $usersFirestore = app(\App\Services\Firestore\UsersFirestoreService::class);
         $userId = $clinicData['mysqlUserId'] ?? $clinicData['ownerUserId'] ?? null;
-        $clinic->user = $clinic->user ?? ($userId ? \App\Models\User::find($userId) : null);
+        // Asegura que la propiedad user exista
+        if (!property_exists($clinic, 'user')) {
+            $clinic->user = null;
+        }
+        if (!$clinic->user && $userId) {
+            $userData = $usersFirestore->getUserByDocId((string) $userId);
+            $clinic->user = $userData ? new \App\Models\User($userData) : null;
+        }
 
         return view('clinics.show', [
             'clinic' => $clinic,
