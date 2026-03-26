@@ -66,6 +66,19 @@
 
                             <div class="border-t my-1"></div>
 
+                                {{-- DEBUG: Mostrar roles actuales del usuario autenticado --}}
+                                @if(auth()->check())
+                                    <div class="px-4 py-2 text-xs text-gray-600 bg-yellow-100 rounded mb-2">
+                                        <strong>Tipo de usuario: </strong>
+                                        @php($roles = auth()->user()->getRoleNames())
+                                        @if($roles && count($roles))
+                                            {{ implode(', ', $roles->toArray()) }}
+                                        @else
+                                            <span class="text-red-600">Sin roles</span>
+                                        @endif
+                                    </div>
+                                @endif
+
                             {{-- Links por rol (en dropdown para mantener el estilo del figma limpio) --}}
                             @role('admin')
                                 <x-dropdown-link :href="route('admin.dashboard')">Admin Panel</x-dropdown-link>

@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
+use App\Services\CloudinaryService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Str;
@@ -32,58 +33,40 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $user = $request->user();
-        $newProfilePhotoPath = null;
+        $newProfilePhotoUrl = null;
 
+        // 1. Subir imagen a Cloudinary si hay nueva
         if ($request->hasFile('profile_photo')) {
-            $directory = public_path('uploads/profile-photos');
-
-            if (! File::exists($directory)) {
-                File::makeDirectory($directory, 0755, true);
-            }
-
-            $extension = $request->file('profile_photo')->getClientOriginalExtension();
-            $filename = 'user-'.$user->id.'-'.Str::lower((string) Str::ulid()).'.'.$extension;
-
-            $request->file('profile_photo')->move($directory, $filename);
-
-            $newProfilePhotoPath = 'uploads/profile-photos/'.$filename;
+            $cloudinary = app(CloudinaryService::class);
+            $newProfilePhotoUrl = $cloudinary->uploadImage($request->file('profile_photo'), 'profile-photos');
         }
 
-        $oldProfilePhotoPath = $user->profile_photo_path;
+        // 2. Construir datos actualizados
+        $data = [
+            'name'  => $request->input('name'),
+            'email' => $request->input('email'),
+        ];
+        if ($newProfilePhotoUrl !== null) {
+            $data['profilePhotoUrl'] = $newProfilePhotoUrl;
+        }
 
+        // 3. Actualizar en Firestore
         try {
-            $user->fill($request->safe()->only(['name', 'email']));
+            $firestore = app(UsersFirestoreService::class);
+            $docId = $firestore->getUserDocId($user->id);
+            $firestore->updateUserFields($docId, $data);
 
-            if ($user->isDirty('email')) {
-                $user->email_verified_at = null;
+            // 4. Refrescar usuario autenticado en sesión
+            $freshData = $firestore->getUserByDocId($docId);
+            if ($freshData) {
+                $userClass = get_class($user);
+                $freshUser = new $userClass($freshData);
+                Auth::setUser($freshUser);
             }
-
-            if ($newProfilePhotoPath !== null) {
-                $user->profile_photo_path = $newProfilePhotoPath;
-            }
-
-            $user->save();
         } catch (Throwable $exception) {
-            if ($newProfilePhotoPath !== null && File::exists(public_path($newProfilePhotoPath))) {
-                File::delete(public_path($newProfilePhotoPath));
-            }
-
             return Redirect::back()
                 ->withInput()
-                ->withErrors(['profile' => 'No se pudo actualizar el perfil. Intenta de nuevo.']);
-        }
-
-        if ($newProfilePhotoPath !== null && $oldProfilePhotoPath && File::exists(public_path($oldProfilePhotoPath))) {
-            File::delete(public_path($oldProfilePhotoPath));
-        }
-
-        try {
-            app(UsersFirestoreService::class)->syncFromUser($user->fresh());
-        } catch (Throwable $exception) {
-            Log::warning('No se pudo sincronizar el perfil con Firestore tras actualizar usuario.', [
-                'userId' => $user->id,
-                'error' => $exception->getMessage(),
-            ]);
+                ->withErrors(['profile' => 'No se pudo actualizar el perfil en Firestore. Intenta de nuevo.']);
         }
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');

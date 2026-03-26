@@ -7,12 +7,7 @@
         'REJECTED' => 'bg-red-100 text-red-800',
         'CANCELLED' => 'bg-gray-100 text-gray-600',
     ];
-    $statusLabels = [
-        'PENDING' => 'Pendiente',
-        'CONFIRMED' => 'Confirmada',
-        'REJECTED' => 'Rechazada',
-        'CANCELLED' => 'Cancelada',
-    ];
+    // El label ya viene traducido en $appointment->statusLabel
     $status = $appointment->status;
 @endphp
 
@@ -25,7 +20,7 @@
                 <div class="text-sm text-gray-500">{{ $appointment->serviceName ?? $appointment->serviceId ?? 'Servicio' }}</div>
             </div>
             <span class="ml-2 px-3 py-1 rounded-full text-xs font-semibold {{ $statusColors[$status] ?? 'bg-gray-100 text-gray-600' }}">
-                {{ $statusLabels[$status] ?? ucfirst(strtolower($status)) }}
+                {{ $appointment->statusLabel ?? ucfirst(strtolower($status)) }}
             </span>
         </div>
         <div class="text-lg font-semibold text-blue-700 flex items-center gap-2 mb-2">

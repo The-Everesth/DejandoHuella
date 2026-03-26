@@ -24,7 +24,7 @@ class DashboardController extends Controller
 
         // Determinar el rol principal por prioridad usando el servicio directamente
         $roleService = app(\App\Services\Firestore\FirestoreUserRoleService::class);
-        $roles = $roleService->getRolesByLaravelUserId((int)$user->id);
+        $roles = $roleService->getRolesByUser($user);
         $mainRole = 'ciudadano';
         if (in_array('admin', $roles, true)) {
             $mainRole = 'admin';

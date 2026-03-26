@@ -25,35 +25,36 @@ class ClinicsFirestoreService{
      * Create or update the clinic for a veterinarian (one clinic per vet).
      * The document id will be deterministic: clinic_u_{userId}
      */
-    public function createOrUpdateClinicForVet(int $userId, array $data): array
+    /**
+     * Crea o actualiza la clínica para un veterinario (acepta userId string o int).
+     */
+    public function createOrUpdateClinicForVet($userId, array $data): array
     {
+        // Forzar a int si es string numérico
+        if (is_string($userId) && ctype_digit($userId)) {
+            $userId = (int)$userId;
+        }
         $id = 'clinic_u_'.$userId;
         $data['ownerUserId'] = $userId;
         $data['updatedAt'] = now()->toIso8601String();
         if (! isset($data['createdAt'])) {
             $data['createdAt'] = now()->toIso8601String();
         }
-        
         Log::info('ClinicsFirestoreService::createOrUpdateClinicForVet() - Creating/updating clinic', [
             'id' => $id,
             'userId' => $userId,
             'dataKeys' => array_keys($data)
         ]);
-        
         $this->client->createDoc($this->collection, $id, $data);
-        
         Log::info('ClinicsFirestoreService::createOrUpdateClinicForVet() - createDoc completed, fetching document');
-        
         $result = $this->client->getDoc($this->collection, $id);
         if (!$result) {
             Log::warning('ClinicsFirestoreService::createOrUpdateClinicForVet() - getDoc returned null after create, returning submitted data');
             return $data;
         }
-        
         Log::info('ClinicsFirestoreService::createOrUpdateClinicForVet() - Document fetched successfully', [
             'resultKeys' => array_keys($result)
         ]);
-        
         return $result;
     }
 

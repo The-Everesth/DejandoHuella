@@ -55,10 +55,19 @@ class ServiceBrowserController extends Controller
             'q' => $q,
         ]));
 
-        $allClinics = $rawClinics->map(function (array $clinicData) use ($servicesById) {
+
+        // Instancia el servicio para buscar usuarios en Firestore
+        $usersFirestore = app(\App\Services\Firestore\UsersFirestoreService::class);
+
+        $allClinics = $rawClinics->map(function (array $clinicData) use ($servicesById, $usersFirestore) {
             $docId = $clinicData['id'] ?? ($clinicData['_docId'] ?? null);
             $ownerId = $clinicData['ownerUserId'] ?? $clinicData['userId'] ?? $clinicData['mysqlUserId'] ?? null;
-            $user = $ownerId ? User::find((int) $ownerId) : null;
+            $user = null;
+            if ($ownerId) {
+                // Busca por docId (soporta IDs automáticos y legacy)
+                $userData = $usersFirestore->getUserByDocId((string) $ownerId);
+                $user = $userData ? new \App\Models\User($userData) : null;
+            }
 
             $serviceIds = $clinicData['serviceIds'] ?? ($clinicData['services'] ?? []);
             $serviceItems = collect(is_array($serviceIds) ? $serviceIds : [])->map(function ($id) use ($servicesById) {

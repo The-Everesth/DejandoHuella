@@ -548,7 +548,7 @@
         const MY_REQUESTED_ADOPTIONS_URL = @json(route('my.requested.adoptions'));
         const UPDATE_ADOPTION_URL_TEMPLATE = @json(route('adopciones.update', ['id' => '__ID__']));
         const IS_AUTHENTICATED = @json(auth()->check());
-        const IS_REFUGIO = @json(auth()->check() && auth()->user()->hasRole('refugio'));
+        const IS_REFUGIO = @json(auth()->check() && auth()->user() && auth()->user()->hasRole('refugio'));
         const CURRENT_USER_ID = @json($currentUserId);
         const CAN_MANAGE_ALL_ADOPTIONS = @json($canManageAllAdoptions);
         const CAN_DELETE_ADOPTION = @json($canDeleteAdoption);

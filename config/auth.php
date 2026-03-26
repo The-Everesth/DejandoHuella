@@ -61,8 +61,8 @@ return [
 
     'providers' => [
         'users' => [
-            'driver' => 'eloquent',
-            'model' => App\Models\User::class,
+            'driver' => 'firestore',
+            'model' => App\Models\FirestoreAuthenticatableUser::class, // usar solo el modelo autenticable Firestore
         ],
 
         // 'users' => [

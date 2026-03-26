@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Services\Firestore\AdoptionsFirestoreService;
 use App\Services\Firestore\AdoptionRequestsFirestoreService;
+use App\Services\CloudinaryService;
 use Illuminate\Support\Str;
+
 
 class AdoptionsController extends Controller
 {
@@ -14,6 +17,34 @@ class AdoptionsController extends Controller
     protected $adoptionRequests;
     protected array $allowedPublisherCache = [];
     protected ?array $citizenVisibleAdoptionLookup = null;
+
+    /**
+     * Robust role check for user (handles array, object, Firestore, etc)
+     */
+    protected function userHasRole($user, $roles): bool
+    {
+        if (is_object($user) && method_exists($user, 'hasRole')) {
+            return $user->hasRole($roles);
+        }
+        $userId = is_object($user) ? ($user->id ?? null) : ($user['id'] ?? null);
+        if (!$userId) return false;
+        $usersService = app(\App\Services\Firestore\UsersFirestoreService::class);
+        $docId = $usersService->getUserDocId((int)$userId);
+        $firestoreUser = $usersService->getUserByDocId($docId);
+        $userRoles = $firestoreUser['roles'] ?? [$firestoreUser['role'] ?? null];
+        if (is_array($roles)) {
+            foreach ($roles as $role) {
+                if (in_array($role, $userRoles)) return true;
+            }
+            return false;
+        }
+        return in_array($roles, $userRoles);
+    }
+
+    protected function userHasAnyRole($user, ...$roles): bool
+    {
+        return $this->userHasRole($user, $roles);
+    }
 
     public function __construct(AdoptionsFirestoreService $firebase, AdoptionRequestsFirestoreService $adoptionRequests)
     {
@@ -32,7 +63,7 @@ class AdoptionsController extends Controller
             return redirect()->route('login');
         }
 
-        if (! $user->hasRole('ciudadano')) {
+        if (! $this->userHasRole($user, 'ciudadano')) {
             abort(403, 'Solo usuarios con rol ciudadano pueden ver sus solicitudes.');
         }
 
@@ -65,7 +96,7 @@ class AdoptionsController extends Controller
             ], 401);
         }
 
-        if (! $user->hasRole('ciudadano')) {
+        if (! $this->userHasRole($user, 'ciudadano')) {
             abort(403, 'Solo usuarios con rol ciudadano pueden consultar sus solicitudes.');
         }
 
@@ -102,7 +133,7 @@ class AdoptionsController extends Controller
             return redirect()->route('login');
         }
 
-        if (! $user->hasRole('ciudadano')) {
+        if (! $this->userHasRole($user, 'ciudadano')) {
             abort(403, 'Solo usuarios con rol ciudadano pueden cancelar sus solicitudes.');
         }
 
@@ -152,7 +183,7 @@ class AdoptionsController extends Controller
             return redirect()->route('login');
         }
 
-        if (! $user->hasAnyRole('veterinario', 'refugio')) {
+        if (! $this->userHasAnyRole($user, 'veterinario', 'refugio')) {
             abort(403, 'Solo usuarios con rol veterinario o refugio pueden ver sus adopciones.');
         }
 
@@ -193,11 +224,11 @@ class AdoptionsController extends Controller
 
         // Compatibilidad legacy: si admin entra por la ruta vieja,
         // lo enviamos al nuevo módulo de moderación de publicaciones.
-        if ($user->hasRole('admin')) {
+        if ($this->userHasRole($user, 'admin')) {
             return redirect()->route('admin.adoptions.index');
         }
 
-        if (! $user->hasAnyRole('veterinario', 'refugio')) {
+        if (! $this->userHasAnyRole($user, 'veterinario', 'refugio')) {
             abort(403, 'Solo usuarios con rol veterinario o refugio pueden ver solicitudes recibidas.');
         }
 
@@ -248,7 +279,7 @@ class AdoptionsController extends Controller
     public function updateRequestStatus(Request $request, string $requestId)
     {
         $user = auth()->user();
-        if ($user && $user->hasRole('admin')) {
+        if ($user && $this->userHasRole($user, 'admin')) {
             abort(403, 'El rol admin solo puede visualizar el estado de las solicitudes.');
         }
 
@@ -304,7 +335,7 @@ class AdoptionsController extends Controller
     public function updateRequestNote(Request $request, string $requestId)
     {
         $user = auth()->user();
-        if ($user && $user->hasRole('admin')) {
+        if ($user && $this->userHasRole($user, 'admin')) {
             abort(403, 'El rol admin solo puede visualizar el estado de las solicitudes.');
         }
 
@@ -375,19 +406,20 @@ class AdoptionsController extends Controller
             $validated['id'] = uniqid('adoption_');
             $validated['createdBy'] = (int) auth()->id();
 
+            // Subir la imagen a Cloudinary si existe
             if ($request->hasFile('fotoMascota')) {
-                $upload = $request->file('fotoMascota');
-                $directory = public_path('adopciones');
-                if (! is_dir($directory)) {
-                    mkdir($directory, 0755, true);
+                $photoFile = $request->file('fotoMascota');
+                if ($photoFile && $photoFile->isValid()) {
+                    $cloudinary = app(CloudinaryService::class);
+                    $secureUrl = $cloudinary->uploadImage($photoFile, 'adoptions');
+                    if ($secureUrl) {
+                        $validated['imageUrl'] = $secureUrl;
+                    }
                 }
-
-                $filename = Str::uuid()->toString().'.'.$upload->getClientOriginalExtension();
-                $upload->move($directory, $filename);
-
-                $validated['imagePath'] = 'adopciones/'.$filename;
-                $validated['imageUrl'] = url('adopciones/'.$filename);
             }
+
+            unset($validated['fotoMascota']); // Nunca guardar la ruta temporal ni el archivo
+            unset($validated['imagePath']); // No usar almacenamiento local
 
             $created = $this->firebase->create($validated, $validated['id']);
 
@@ -691,47 +723,32 @@ class AdoptionsController extends Controller
                 ], 422);
             }
 
-            $upload = $request->file('fotoMascota');
-            if (! $upload || ! $upload->isValid()) {
+            $photoFile = $request->file('fotoMascota');
+            if (! $photoFile || ! $photoFile->isValid()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'El archivo de imagen no es válido'
                 ], 422);
             }
 
-            $directory = public_path('uploads/adoptions');
-            if (! is_dir($directory)) {
-                mkdir($directory, 0755, true);
+            $cloudinary = app(CloudinaryService::class);
+            $secureUrl = $cloudinary->uploadImage($photoFile, 'adoptions');
+            if (! $secureUrl) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo subir la imagen a Cloudinary'
+                ], 422);
             }
 
-            $filename = Str::uuid()->toString().'.'.$upload->getClientOriginalExtension();
-            $upload->move($directory, $filename);
-
-            $newImagePath = 'uploads/adoptions/'.$filename;
-            $newImageUrl = url($newImagePath);
-
             $updated = $this->firebase->update($id, [
-                'imagePath' => $newImagePath,
-                'imageUrl' => $newImageUrl,
+                'imageUrl' => $secureUrl,
             ]);
 
             if (! $updated) {
-                $newFullPath = public_path($newImagePath);
-                if (is_file($newFullPath)) {
-                    @unlink($newFullPath);
-                }
-
                 return response()->json([
                     'success' => false,
                     'message' => 'No se pudo actualizar la imagen'
                 ], 422);
-            }
-
-            if (! empty($adoption['imagePath'])) {
-                $oldFullPath = public_path($adoption['imagePath']);
-                if (is_file($oldFullPath)) {
-                    @unlink($oldFullPath);
-                }
             }
 
             $fresh = $this->firebase->get($id);
@@ -774,85 +791,72 @@ class AdoptionsController extends Controller
         ]);
 
         try {
-            $user = auth()->user();
-            if (! $user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Debes iniciar sesión para solicitar una adopción'
-                ], 401);
+            $roleError = $this->ensurePublisherRole();
+            if ($roleError) {
+                return $roleError;
             }
 
-            if (! $user->hasRole('ciudadano')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Solo usuarios con rol ciudadano pueden enviar solicitudes de adopción'
-                ], 403);
-            }
-
-            $adopcion = $this->firebase->get($id);
-            if (! is_array($adopcion)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Mascota no encontrada'
-                ], 404);
-            }
-
-            if ($this->isAdoptionHidden($adopcion)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Mascota no encontrada'
-                ], 404);
-            }
-
-            if (! $this->isAllowedPublisher($adopcion)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Mascota no encontrada'
-                ], 404);
-            }
-
-            if (isset($adopcion['createdBy']) && (int) $adopcion['createdBy'] === (int) $user->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No puedes solicitar adopción para una publicación tuya'
-                ], 422);
-            }
-
-            $hogarIntegrantes = array_values(array_unique($validated['hogarIntegrantes'] ?? []));
-            if (in_array('otros', $hogarIntegrantes, true) && blank($validated['hogarIntegrantesOtros'] ?? null)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Debes especificar quiénes viven en tu hogar cuando seleccionas "Otros"'
-                ], 422);
-            }
-
-            $solicitud = $this->adoptionRequests->createForAdoption($id, (int) $user->id, [
-                'petName' => (string) ($adopcion['nombreAnimal'] ?? ''),
-                'publisherId' => isset($adopcion['createdBy']) ? (int) $adopcion['createdBy'] : null,
-                'applicantName' => (string) ($user->name ?? ''),
-                'applicantEmail' => (string) ($user->email ?? ''),
-                'nombreCompleto' => (string) $validated['nombreCompleto'],
-                'direccionCiudad' => (string) $validated['direccionCiudad'],
-                'tipoVivienda' => (string) $validated['tipoVivienda'],
-                'experienciaMascotas' => (string) $validated['experienciaMascotas'],
-                'patioJardin' => (string) $validated['patioJardin'],
-                'hogarIntegrantes' => $hogarIntegrantes,
-                'hogarIntegrantesOtros' => isset($validated['hogarIntegrantesOtros']) ? (string) $validated['hogarIntegrantesOtros'] : null,
-                'tieneOtrosAnimales' => (string) $validated['tieneOtrosAnimales'],
-                'tiposOtrosAnimales' => isset($validated['tiposOtrosAnimales']) ? (string) $validated['tiposOtrosAnimales'] : null,
-                'otrosAnimalesEsterilizados' => isset($validated['otrosAnimalesEsterilizados']) ? (string) $validated['otrosAnimalesEsterilizados'] : null,
-                'tuvoMascotasAntes' => (string) $validated['tuvoMascotasAntes'],
-                'detalleMascotasAnteriores' => isset($validated['detalleMascotasAnteriores']) ? (string) $validated['detalleMascotasAnteriores'] : null,
-                'dispuestoAtencionVeterinaria' => (string) $validated['dispuestoAtencionVeterinaria'],
-                'telefono' => (string) $validated['telefono'],
-                'mensaje' => (string) $validated['mensaje'],
+            $validated = $request->validate([
+                'nombreAnimal' => 'sometimes|string|max:255',
+                'tipoAnimal' => 'sometimes|string|max:100',
+                'sexo' => 'sometimes|string|in:hembra,macho',
+                'edad' => 'sometimes|integer|min:0|max:50',
+                'raza' => 'sometimes|string|max:255',
+                'detalles' => 'nullable|string|max:1000',
+                'estado' => 'sometimes|string|max:50',
+                'fotoMascota' => 'nullable|image|max:4096',
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Solicitud enviada correctamente',
-                'data' => $solicitud,
-            ], 201);
+            try {
+                $adopcion = $this->firebase->get($id);
+                if (! is_array($adopcion)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Adopción no encontrada'
+                    ], 404);
+                }
+
+                $authorizationError = $this->forbidIfCannotManageAdoption($adopcion);
+                if ($authorizationError) {
+                    return $authorizationError;
+                }
+
+                // Si viene una nueva foto en el formulario de edición, la subimos a Cloudinary
+                if ($request->hasFile('fotoMascota')) {
+                    $photoFile = $request->file('fotoMascota');
+                    if ($photoFile && $photoFile->isValid()) {
+                        $cloudinary = app(CloudinaryService::class);
+                        $secureUrl = $cloudinary->uploadImage($photoFile, 'adoptions');
+                        if ($secureUrl) {
+                            $validated['imageUrl'] = $secureUrl;
+                        }
+                    }
+                }
+
+                unset($validated['fotoMascota']); // Nunca guardar la ruta temporal ni el archivo
+                unset($validated['imagePath']); // No usar almacenamiento local
+
+                $updated = $this->firebase->update($id, $validated);
+                if (! $updated) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Adopción no encontrada'
+                    ], 404);
+                }
+
+                $adopcion = $this->firebase->get($id);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Adopción actualizada correctamente',
+                    'data' => $adopcion
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error: ' . $e->getMessage()
+                ], 500);
+            }
         } catch (\RuntimeException $e) {
             return response()->json([
                 'success' => false,
@@ -880,7 +884,7 @@ class AdoptionsController extends Controller
             ], 401);
         }
 
-        if (! $user->hasAnyRole('veterinario', 'refugio')) {
+        if (! $this->userHasAnyRole($user, 'veterinario', 'refugio')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Solo usuarios con rol veterinario o refugio pueden publicar y gestionar adopciones'
@@ -921,7 +925,7 @@ class AdoptionsController extends Controller
             return false;
         }
 
-        if (! $user->hasAnyRole('veterinario', 'refugio')) {
+        if (! $this->userHasAnyRole($user, 'veterinario', 'refugio')) {
             return false;
         }
 
@@ -960,9 +964,13 @@ class AdoptionsController extends Controller
             return $this->allowedPublisherCache[$publisherId];
         }
 
-        $publisher = User::withTrashed()->find($publisherId);
+        // Firestore-based user lookup by Laravel user ID
+        $usersService = app(\App\Services\Firestore\UsersFirestoreService::class);
+        $docId = $usersService->getUserDocId($publisherId);
+        $publisher = $usersService->getUserByDocId($docId);
+        $roles = $publisher['roles'] ?? [$publisher['role'] ?? null];
         $isAllowed = $publisher
-            ? $publisher->hasAnyRole('veterinario', 'refugio')
+            ? (is_array($roles) && (in_array('veterinario', $roles) || in_array('refugio', $roles)))
             : true;
 
         $this->allowedPublisherCache[$publisherId] = $isAllowed;

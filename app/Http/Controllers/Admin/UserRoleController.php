@@ -23,36 +23,36 @@ class UserRoleController extends Controller
 
     public function index(Request $request)
     {
+        // DEBUG: Mostrar usuario autenticado y roles
+        $user = auth()->user();
+        $roles = method_exists($user, 'getRoleNames') ? $user->getRoleNames() : ($user->role ?? null);
+        dd([
+            'user' => $user,
+            'roles' => $roles,
+        ]);
+
         $q = trim((string) $request->query('q', ''));
         $role = $request->query('role');       // admin|veterinario|refugio|ciudadano
         $status = $request->query('status');   // pending|approved|rejected|all
         $trashed = $request->query('trashed'); // null|with|only
 
-        $query = User::query()
-            // SoftDeletes: mostrar también desactivados si se pide
-            ->when($trashed === 'with', function ($query) {
-                $query->withTrashed();
-            })
-            ->when($trashed === 'only', function ($query) {
-                $query->onlyTrashed();
-            })
-
-            // búsqueda por texto
-            ->when($q !== '', function ($query) use ($q) {
-                $query->where(function ($sub) use ($q) {
-                    $sub->where('name', 'like', "%{$q}%")
-                        ->orWhere('email', 'like', "%{$q}%");
-                });
-            })
-
-            // filtro por estado de solicitud (si lo manejas)
-            ->when($status && $status !== 'all', function ($query) use ($status) {
-                $query->where('role_request_status', $status);
-            })
-
-            ->orderBy('name');
-
-        $allUsers = $query->get();
+            // Listar usuarios desde Firestore
+            $allUsers = collect(app(\App\Services\Firestore\UsersFirestoreService::class)->list());
+            // Filtros manuales
+            if ($trashed === 'only') {
+                $allUsers = $allUsers->whereNotNull('deleted_at')->values();
+            } elseif ($trashed !== 'with') {
+                $allUsers = $allUsers->whereNull('deleted_at')->values();
+            }
+            if ($q !== '') {
+                $allUsers = $allUsers->filter(function ($user) use ($q) {
+                    return (stripos($user['name'] ?? '', $q) !== false) || (stripos($user['email'] ?? '', $q) !== false);
+                })->values();
+            }
+            if ($status && $status !== 'all') {
+                $allUsers = $allUsers->where('role_request_status', $status)->values();
+            }
+            $allUsers = $allUsers->sortBy('name')->values();
 
         if ($role) {
             $allUsers = $allUsers->filter(function ($user) use ($role) {
@@ -93,101 +93,97 @@ class UserRoleController extends Controller
         return view('admin.users.edit-role', compact('user', 'roles', 'currentRole'));
     }
 
-    public function update(Request $request, User $user)
+    public function update(Request $request, $userId)
     {
         $data = $request->validate([
             'role' => 'required|string|in:admin,veterinario,refugio,ciudadano',
         ]);
 
-        // Evitar que el admin se quite a sí mismo el rol admin (opcional pero recomendado)
+        $userData = app(\App\Services\Firestore\UsersFirestoreService::class)->getUserByDocId($userId);
+        $user = $userData ? new \App\Models\User($userData) : null;
+        if (!$user) {
+            return back()->withErrors(['user' => 'Usuario no encontrado.']);
+        }
         if (auth()->id() === $user->id && $data['role'] !== 'admin') {
             return back()->withErrors(['role' => 'No puedes quitarte el rol admin a ti mismo.']);
         }
-
-        // Para el proyecto, manejamos 1 rol principal: syncRoles reemplaza el/los rol(es)
-        $user->syncRoles([$data['role']]);
+        app(\App\Services\Firestore\UsersFirestoreService::class)->updateUserFields($userId, ['role' => $data['role']]);
         $this->firestoreRoles->resolveRoleRequest($user, 'approved', $data['role']);
-
-        return redirect()
-            ->route('admin.users.index')
-            ->with('success', 'Rol actualizado.');
+        return redirect()->route('admin.users.index')->with('success', 'Rol actualizado.');
     }
 
-    public function pending()
-{
-    $users = User::query()
-        ->where('role_request_status', 'pending')
-        ->orderByDesc('role_requested_at')
-        ->get();
+    public function pending(UsersFirestoreService $firestore)
+    {
+        $all = collect($firestore->list());
+        $users = $all->filter(function ($user) {
+            return ($user['role_request_status'] ?? null) === 'pending';
+        })->sortByDesc('role_requested_at')->values();
+        return view('admin.users.pending', compact('users'));
+    }
 
-    return view('admin.users.pending', compact('users'));
-}
-
-public function approve(User $user)
+public function approve($userId)
 {
-    if ($user->role_request_status !== 'pending' || !in_array($user->requested_role, ['veterinario', 'refugio'], true)) {
+    $userData = app(\App\Services\Firestore\UsersFirestoreService::class)->getUserByDocId($userId);
+    $user = $userData ? new \App\Models\User($userData) : null;
+    if (!$user || $user->role_request_status !== 'pending' || !in_array($user->requested_role, ['veterinario', 'refugio'], true)) {
         return back()->withErrors(['role' => 'No hay solicitud válida para aprobar.']);
     }
-
-    $user->syncRoles([$user->requested_role]);
-    $user->role_request_status = 'approved';
-    $user->role_reviewed_at = now();
-    $user->save();
+    app(\App\Services\Firestore\UsersFirestoreService::class)->updateUserFields($userId, [
+        'role' => $user->requested_role,
+        'role_request_status' => 'approved',
+        'role_reviewed_at' => now()->toIso8601String(),
+    ]);
     $this->firestoreRoles->resolveRoleRequest($user, 'approved', $user->requested_role);
-
     return back()->with('success', 'Solicitud aprobada.');
 }
 
-public function reject(User $user)
+public function reject($userId)
 {
-    if ($user->role_request_status !== 'pending') {
+    $userData = app(\App\Services\Firestore\UsersFirestoreService::class)->getUserByDocId($userId);
+    $user = $userData ? new \App\Models\User($userData) : null;
+    if (!$user || $user->role_request_status !== 'pending') {
         return back()->withErrors(['role' => 'No hay solicitud válida para rechazar.']);
     }
-
-    // Se queda como ciudadano
-    $user->syncRoles(['ciudadano']);
-    $user->role_request_status = 'rejected';
-    $user->role_reviewed_at = now();
-    $user->save();
+    app(\App\Services\Firestore\UsersFirestoreService::class)->updateUserFields($userId, [
+        'role' => 'ciudadano',
+        'role_request_status' => 'rejected',
+        'role_reviewed_at' => now()->toIso8601String(),
+    ]);
     $this->firestoreRoles->resolveRoleRequest($user, 'rejected');
-
     return back()->with('success', 'Solicitud rechazada (se mantiene como ciudadano).');
 }
-public function editUser(User $user)
-{
-    return view('admin.users.edit', compact('user'));
-}
-
-public function updateUser(Request $request, User $user)
-{
-    $data = $request->validate([
-        'name' => ['required','string','max:255'],
-        'email' => ['required','email','max:255', Rule::unique('users','email')->ignore($user->id)],
-    ]);
-
-    $user->update($data);
-
-    return redirect()->route('admin.users.index')->with('success', 'Usuario actualizado.');
-}
-
-public function destroy(User $user)
-{
-    if (auth()->id() === $user->id) {
-        return back()->withErrors(['user' => 'No puedes eliminar tu propio usuario.']);
+    public function editUser($userId)
+    {
+        $userData = app(\App\Services\Firestore\UsersFirestoreService::class)->getUserByDocId($userId);
+        $user = $userData ? new \App\Models\User($userData) : null;
+        return view('admin.users.edit', compact('user'));
     }
 
-    $user->delete();
-
-    return redirect()->route('admin.users.index')->with('success', 'Usuario eliminado.');
-}
-public function restore(string $user)
+    public function updateUser(Request $request, $userId)
 {
-    $u = User::withTrashed()->findOrFail($user);
-
-    $u->restore();
-
-    return redirect()->route('admin.users.index')->with('success', 'Usuario restaurado.');
+        $data = $request->validate([
+            'name' => ['required','string','max:255'],
+            'email' => ['required','email','max:255'],
+        ]);
+        app(\App\Services\Firestore\UsersFirestoreService::class)->updateUserFields($userId, $data);
+        return redirect()->route('admin.users.index')->with('success', 'Usuario actualizado.');
 }
+
+    public function destroy($userId)
+{
+        $userData = app(\App\Services\Firestore\UsersFirestoreService::class)->getUserByDocId($userId);
+        $user = $userData ? new \App\Models\User($userData) : null;
+        if (auth()->id() === $userId) {
+            return back()->withErrors(['user' => 'No puedes eliminar tu propio usuario.']);
+        }
+        app(\App\Services\Firestore\UsersFirestoreService::class)->updateUserFields($userId, ['deleted_at' => now()->toIso8601String()]);
+        return redirect()->route('admin.users.index')->with('success', 'Usuario eliminado.');
+}
+    public function restore($userId)
+    {
+        app(\App\Services\Firestore\UsersFirestoreService::class)->updateUserFields($userId, ['deleted_at' => null]);
+        return redirect()->route('admin.users.index')->with('success', 'Usuario restaurado.');
+    }
 
 
 }

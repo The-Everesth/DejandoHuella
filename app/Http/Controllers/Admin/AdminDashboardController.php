@@ -19,14 +19,12 @@ class AdminDashboardController extends Controller
 
     public function index()
     {
-        // Usuarios activos (sin desactivados)
-        $usersCount = User::query()
-            ->whereNull('deleted_at')
-            ->count();
+        // Usuarios activos (Firestore)
+        $users = collect(app(\App\Services\Firestore\UsersFirestoreService::class)->list());
+        $usersCount = $users->whereNull('deleted_at')->count();
 
         // Solicitudes pendientes (rol veterinario/refugio)
-        $pendingUsers = User::query()
-            ->where('role_request_status', 'pending')
+        $pendingUsers = $users->where('role_request_status', 'pending')
             ->whereIn('requested_role', ['veterinario', 'refugio'])
             ->count();
 
@@ -37,27 +35,19 @@ class AdminDashboardController extends Controller
 
         $pendingTickets = SupportTicket::where('status', 'pendiente')->count();
 
-        $pendingRoleRequests = User::where('role_request_status', 'pending')->count();
+        $pendingRoleRequests = $users->where('role_request_status', 'pending')->count();
 
         $pendingAppointments = Appointment::where('status', 'pendiente')->count();
 
         $adoptionDocuments = collect($this->adoptions->list())->values();
         $publisherIds = $adoptionDocuments
             ->pluck('createdBy')
-            ->filter(function ($id): bool {
-                return is_numeric($id) && (int) $id > 0;
-            })
-            ->map(function ($id): int {
-                return (int) $id;
-            })
+            ->filter(fn($id) => !empty($id))
             ->unique()
             ->values()
             ->all();
 
-        $publishers = User::withTrashed()
-            ->whereIn('id', $publisherIds)
-            ->get()
-            ->keyBy('id');
+        $publishers = $users->whereIn('id', $publisherIds)->keyBy('id');
 
         $eligibleAdoptions = $adoptionDocuments->filter(function (array $adoption) use ($publishers): bool {
             $publisher = $publishers->get((int) ($adoption['createdBy'] ?? 0));

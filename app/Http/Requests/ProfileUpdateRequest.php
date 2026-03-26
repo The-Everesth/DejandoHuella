@@ -26,7 +26,7 @@ class ProfileUpdateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', 'regex:/^[\pL\s"\'-]+$/u'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($this->user()->id)],
-            'profile_photo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+            'profile_photo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:10240'],
         ];
     }
 
@@ -40,7 +40,7 @@ class ProfileUpdateRequest extends FormRequest
             'email.email' => 'Ingresa un correo electrónico válido.',
             'profile_photo.image' => 'La imagen de perfil debe ser un archivo de imagen válido.',
             'profile_photo.mimes' => 'La imagen de perfil debe estar en formato JPG, PNG o WEBP.',
-            'profile_photo.max' => 'La imagen de perfil no debe superar los 2 MB.',
+            'profile_photo.max' => 'La imagen de perfil no debe superar los 10 MB.',
         ];
     }
 
