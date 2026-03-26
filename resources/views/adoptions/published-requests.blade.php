@@ -149,34 +149,34 @@
             @endphp
 
             <article
-                class="published-request-card rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                class="published-request-card rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
                 data-status="{{ $statusValue }}"
                 data-type="{{ $petTypeValue }}"
                 data-sex="{{ $petSexValue }}"
             >
-                <div class="published-request-layout flex flex-col gap-5">
+                <div class="published-request-layout flex flex-col gap-3">
                     <div class="min-w-0 flex-1">
-                        <h2 class="break-all text-2xl font-semibold leading-none text-gray-800 md:text-4xl">{{ $requestCodeLabel }}</h2>
-                        <p class="mt-2 text-base text-gray-500 md:text-xl">Solicitud de adopcion</p>
+                        <h2 class="break-all text-lg font-semibold leading-none text-gray-800 md:text-xl">{{ $requestCodeLabel }}</h2>
+                        <p class="mt-1 text-sm text-gray-500 md:text-base">Solicitud de adopción</p>
 
-                        <div class="mt-4 flex items-center gap-2 text-blue-700">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-6 w-6">
+                        <div class="mt-2 flex items-center gap-1 text-blue-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 2v3m8-3v3M3.5 10h17M5 4.75h14a1.75 1.75 0 0 1 1.75 1.75v12A1.75 1.75 0 0 1 19 20.25H5A1.75 1.75 0 0 1 3.25 18.5v-12A1.75 1.75 0 0 1 5 4.75Z" />
                             </svg>
-                            <span class="text-xl font-semibold leading-none md:text-3xl">{{ $createdAtLabel }}</span>
+                            <span class="text-sm font-semibold leading-none md:text-base">{{ $createdAtLabel }}</span>
                         </div>
 
-                        <div class="mt-4 grid grid-cols-1 gap-3 text-base md:grid-cols-2">
-                            <p class="text-base text-gray-700 md:text-xl"><span class="font-semibold text-gray-800">Mascota:</span> {{ $petName }} ({{ $petTypeLabel }}, {{ $petSexLabel }})</p>
-                            <p class="text-base text-gray-700 md:text-xl"><span class="font-semibold text-gray-800">Solicitante:</span> {{ $applicantName }}</p>
+                        <div class="mt-2 grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
+                            <p class="text-sm text-gray-700 md:text-base"><span class="font-semibold text-gray-800">Mascota:</span> {{ $petName }} ({{ $petTypeLabel }}, {{ $petSexLabel }})</p>
+                            <p class="text-sm text-gray-700 md:text-base"><span class="font-semibold text-gray-800">Solicitante:</span> {{ $applicantName }}</p>
                         </div>
 
-                        <p class="mt-3 text-base text-gray-700 md:text-xl"><span class="font-semibold text-gray-800">Contacto:</span> {{ $contactEmail }}</p>
-                        <p class="mt-1 text-base text-gray-700 md:text-xl"><span class="font-semibold text-gray-800">Telefono:</span> {{ $contactPhone }}</p>
-                        <p class="mt-1 text-base text-gray-700 md:text-xl"><span class="font-semibold text-gray-800">Ciudad:</span> {{ $city }}</p>
-                        <p class="mt-3 text-base text-gray-700 md:text-xl"><span class="font-semibold text-gray-800">Nota del usuario:</span> {{ $requestMessage }}</p>
+                        <p class="mt-2 text-sm text-gray-700 md:text-base"><span class="font-semibold text-gray-800">Contacto:</span> {{ $contactEmail }}</p>
+                        <p class="mt-1 text-sm text-gray-700 md:text-base"><span class="font-semibold text-gray-800">Teléfono:</span> {{ $contactPhone }}</p>
+                        <p class="mt-1 text-sm text-gray-700 md:text-base"><span class="font-semibold text-gray-800">Ciudad:</span> {{ $city }}</p>
+                        <p class="mt-2 text-sm text-gray-700 md:text-base"><span class="font-semibold text-gray-800">Nota del usuario:</span> {{ $requestMessage }}</p>
                         @if($reviewerNote !== '')
-                            <p class="mt-2 whitespace-pre-line rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900 md:text-base">
+                            <p class="mt-1 whitespace-pre-line rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-xs text-blue-900 md:text-sm">
                                 <span class="font-semibold">Tu nota al ciudadano:</span> {{ $reviewerNote }}
                             </p>
                         @endif
@@ -224,12 +224,13 @@
                             </span>
                         </div>
 
-                        @if($requestId !== '' && ! $isCancelled)
+                        @if($requestId !== '' && ! $isCancelled && ! $isApproved && ! $isRejected)
                             <div class="space-y-2">
-                                <form method="POST" action="{{ route('requests.status', ['requestId' => $requestId]) }}">
+                                <form method="POST" action="{{ route('requests.status', ['requestId' => $requestId]) }}" class="request-status-form">
                                     @csrf
                                     @method('PATCH')
                                     <input type="hidden" name="status" value="aprobada">
+                                    <input type="hidden" name="reviewerNote" value="{{ $reviewerNote }}" class="reviewer-note-hidden">
                                     <button
                                         type="submit"
                                         class="w-full rounded-md bg-green-600 px-4 py-2 text-lg font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -239,10 +240,11 @@
                                     </button>
                                 </form>
 
-                                <form method="POST" action="{{ route('requests.status', ['requestId' => $requestId]) }}">
+                                <form method="POST" action="{{ route('requests.status', ['requestId' => $requestId]) }}" class="request-status-form">
                                     @csrf
                                     @method('PATCH')
                                     <input type="hidden" name="status" value="rechazada">
+                                    <input type="hidden" name="reviewerNote" value="{{ $reviewerNote }}" class="reviewer-note-hidden">
                                     <button
                                         type="submit"
                                         class="w-full rounded-md bg-red-600 px-4 py-2 text-lg font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -316,6 +318,13 @@
     </div>
 
     <style>
+        .published-request-card {
+            padding: 0.75rem !important;
+            margin-bottom: 0.75rem;
+        }
+        .published-request-layout {
+            gap: 0.75rem !important;
+        }
         .save-note-btn {
             display: inline-flex;
             align-items: center;
@@ -370,6 +379,22 @@
     </style>
 
     <script>
+        // Sincronizar el valor de la nota con los formularios de Confirmar/Rechazar
+        document.addEventListener('DOMContentLoaded', function () {
+            const cards = document.querySelectorAll('.published-request-card');
+            cards.forEach(card => {
+                const noteInput = card.querySelector('textarea[name="reviewerNote"]');
+                const hiddenInputs = card.querySelectorAll('input.reviewer-note-hidden');
+                if (noteInput && hiddenInputs.length) {
+                    // Actualizar los hidden cuando cambia el textarea
+                    noteInput.addEventListener('input', function () {
+                        hiddenInputs.forEach(h => h.value = noteInput.value);
+                    });
+                    // Inicializar hidden con el valor actual
+                    hiddenInputs.forEach(h => h.value = noteInput.value);
+                }
+            });
+        });
         (function () {
             const statusFilter = document.getElementById('publishedRequestsStatusFilter');
             const typeFilter = document.getElementById('publishedRequestsTypeFilter');
@@ -429,6 +454,32 @@
 
             const noteToggleButtons = Array.from(document.querySelectorAll('[data-note-toggle-target]'));
             const noteCancelButtons = Array.from(document.querySelectorAll('[data-note-cancel-target]'));
+
+            // Validación: No permitir confirmar/rechazar sin nota
+            const statusForms = Array.from(document.querySelectorAll('form[action*="requests.status"]'));
+            statusForms.forEach((form) => {
+                form.addEventListener('submit', function (e) {
+                    // Buscar el textarea de nota relacionado a esta solicitud
+                    // Buscar el input hidden con name=requestId o extraer del action
+                    let noteInput = null;
+                    // Buscar textarea dentro del mismo card
+                    let card = form.closest('.published-request-card');
+                    if (card) {
+                        noteInput = card.querySelector('textarea[name="reviewerNote"]');
+                    }
+                    if (!noteInput || !noteInput.value.trim()) {
+                        e.preventDefault();
+                        alert('Debes agregar una nota antes de confirmar o rechazar la solicitud.');
+                        // Abrir panel de nota si existe
+                        if (card) {
+                            const notePanel = card.querySelector('[id^="publishedRequestNotePanel_"]');
+                            if (notePanel) notePanel.classList.remove('hidden');
+                            if (noteInput) noteInput.focus();
+                        }
+                        return false;
+                    }
+                });
+            });
 
             noteToggleButtons.forEach((button) => {
                 button.addEventListener('click', () => {
