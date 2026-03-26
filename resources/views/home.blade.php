@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('content')
-    <section class="space-y-24">
+    <section class="space-y-2">
         {{-- HERO + ACCESOS --}}
-        <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 mb-20 mt-24">
+        <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 mb-1 mt-1">
             <div class="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm sm:p-10 lg:col-span-6">
                 <p class="text-sm font-semibold text-teal-700">Dejando Huella</p>
                 <h1 class="mt-3 text-4xl font-black leading-tight text-gray-900 sm:text-5xl">
@@ -94,7 +94,8 @@
             </div>
         </div>
 
-        <section class="py-12"> <div class="mt-8 mb-20 grid grid-cols-1 gap-8 md:grid-cols-3">
+        <section class="py-12"> 
+        <div class="mt-2 mb-2 grid grid-cols-1 gap-8 md:grid-cols-3">
             <div class="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-center">
             <div class="text-5xl font-black text-blue-700" id="counter-users">0</div>
             <div class="mt-3 text-2xl font-semibold text-blue-900">Usuarios registrados</div>
@@ -112,7 +113,7 @@
     </div>
 </section>
 
-<section class="mt-32 mb-40 max-w-7xl mx-auto px-4 mb-40"> 
+<section class="mt-1 mb-1 max-w-7xl mx-auto px-4"> 
     <div class="grid grid-cols-1 gap-8 md:grid-cols-3">
         
         <div class="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
