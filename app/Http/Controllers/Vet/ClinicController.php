@@ -20,13 +20,33 @@ class ClinicController extends Controller
 
     public function index()
     {
-        $clinics = \App\Models\Clinic::query()
-            ->where('user_id', auth()->id())
-            ->latest()
-            ->paginate(10);
+        // Leer clínicas del veterinario autenticado desde Firestore
+        $userId = auth()->id();
+        $allClinics = $this->clinicsFirestore->list();
+        $clinics = collect($allClinics)
+            ->filter(function ($clinic) use ($userId) {
+                return isset($clinic['userId']) && $clinic['userId'] == $userId;
+            })
+            ->values();
 
-        return view('vet.clinics.index', compact('clinics'));
+        // Simular paginación simple (10 por página)
+        $perPage = 10;
+        $currentPage = request()->get('page', 1);
+        $pageItems = $clinics->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
+            $pageItems,
+            $clinics->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
+
+        return view('vet.clinics.index', ['clinics' => $paginated]);
     }
+
 
 
     public function create()
@@ -47,33 +67,31 @@ class ClinicController extends Controller
             'is_public' => ['boolean'],
         ]);
 
-        $data['user_id'] = auth()->id();
+        $userId = auth()->id();
+        $data['userId'] = $userId;
         $data['is_public'] = $request->boolean('is_public', true);
+        $data['published'] = $data['is_public'];
 
-        $clinic = \App\Models\Clinic::create($data);
-
-        // Sync to Firestore (dual-write)
-        try {
-            $this->clinicsFirestore->syncFromModel($clinic);
-            Log::info('ClinicController::store() - Clinic synced to Firestore', ['clinicId' => $clinic->id]);
-        } catch (\Throwable $e) {
-            Log::error('ClinicController::store() - Failed to sync to Firestore', ['error' => $e->getMessage()]);
-            // Don't fail the request, MySQL write succeeded
-        }
+        // Crear clínica en Firestore
+        $clinic = $this->clinicsFirestore->createOrUpdateClinicForVet($userId, $data);
 
         return redirect()->route('vet.clinics.index')->with('success', 'Clínica creada correctamente.');
     }
 
 
-    public function edit(Clinic $clinic)
+    public function edit($clinicId)
     {
-        abort_unless($clinic->user_id === auth()->id(), 403);
-        return view('vet.clinics.edit', compact('clinic'));
+        $clinic = $this->clinicsFirestore->getClinicById($clinicId);
+        $userId = auth()->id();
+        abort_unless($clinic && (isset($clinic['userId']) && $clinic['userId'] == $userId), 403);
+        return view('vet.clinics.edit', ['clinic' => (object)$clinic]);
     }
 
-    public function update(Request $request, Clinic $clinic)
+    public function update(Request $request, $clinicId)
     {
-        abort_unless($clinic->user_id === auth()->id(), 403);
+        $clinic = $this->clinicsFirestore->getClinicById($clinicId);
+        $userId = auth()->id();
+        abort_unless($clinic && (isset($clinic['userId']) && $clinic['userId'] == $userId), 403);
 
         $data = $request->validate([
             'name' => ['required','string','max:120'],
@@ -86,64 +104,21 @@ class ClinicController extends Controller
             'is_public' => ['nullable','boolean'],
         ]);
 
-        Log::info('ClinicController::update() - Starting update', [
-            'clinicId' => $clinic->id,
-            'userId' => auth()->id(),
-            'oldName' => $clinic->name,
-            'newName' => $data['name'] ?? null,
-            'fieldsToUpdate' => array_keys($data),
-        ]);
+        $data['userId'] = $userId;
+        $data['is_public'] = $request->boolean('is_public', true);
+        $data['published'] = $data['is_public'];
 
-        $clinic->update($data);
-        Log::info('ClinicController::update() - After update(), before refresh', [
-            'clinicId' => $clinic->id,
-            'inMemoryName' => $clinic->name,
-        ]);
-
-        $clinic->refresh(); // Refresh model from DB to get updated values
-        Log::info('ClinicController::update() - After refresh()', [
-            'clinicId' => $clinic->id,
-            'refreshedName' => $clinic->name,
-            'refreshedPhone' => $clinic->phone,
-        ]);
-
-        // Sync to Firestore (dual-write)
-        try {
-            Log::info('ClinicController::update() - Calling syncFromModel', [
-                'clinicId' => $clinic->id,
-                'fsDocId' => 'c_' . $clinic->id,
-            ]);
-            
-            $this->clinicsFirestore->syncFromModel($clinic);
-            Log::info('ClinicController::update() - Clinic synced to Firestore', ['clinicId' => $clinic->id]);
-        } catch (\Throwable $e) {
-            Log::error('ClinicController::update() - Failed to sync to Firestore', [
-                'clinicId' => $clinic->id,
-                'error' => $e->getMessage(),
-                'errorCode' => $e->getCode(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            // Don't fail the request, MySQL write succeeded
-        }
+        $this->clinicsFirestore->createOrUpdateClinicForVet($userId, array_merge($clinic, $data));
 
         return redirect()->route('vet.clinics.index')->with('success', 'Clínica actualizada correctamente.');
     }
 
-    public function destroy(Clinic $clinic)
+    public function destroy($clinicId)
     {
-        $this->authorize('delete', $clinic);
-        
-        // Delete from Firestore first (dual-write strategy)
-        try {
-            $this->clinicsFirestore->deleteFromModel($clinic);
-            Log::info('ClinicController::destroy() - Clinic deleted from Firestore', ['clinicId' => $clinic->id]);
-        } catch (\Throwable $e) {
-            Log::error('ClinicController::destroy() - Failed to delete from Firestore', ['error' => $e->getMessage()]);
-            // Don't fail the request, proceed with MySQL delete
-        }
-        
-        // Then delete from MySQL
-        $clinic->delete();
+        $clinic = $this->clinicsFirestore->getClinicById($clinicId);
+        $userId = auth()->id();
+        abort_unless($clinic && (isset($clinic['userId']) && $clinic['userId'] == $userId), 403);
+        $this->clinicsFirestore->deleteClinicById($clinicId);
         return back()->with('success', 'Clínica eliminada correctamente.');
     }
 }

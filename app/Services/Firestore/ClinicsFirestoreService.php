@@ -3,8 +3,16 @@ namespace App\Services\Firestore;
 
 use Illuminate\Support\Facades\Log;
 
-class ClinicsFirestoreService
-{
+class ClinicsFirestoreService{
+
+    /**
+     * Elimina una clínica por ID en Firestore
+     */
+    public function deleteClinicById(string $clinicId): void
+    {
+        $this->client->deleteDoc($this->collection, $clinicId);
+    }
+
     protected FirestoreRestClient $client;
     protected string $collection = 'clinicas';
 
@@ -80,7 +88,9 @@ class ClinicsFirestoreService
         $q = isset($filters['q']) ? mb_strtolower($filters['q']) : null;
 
         foreach ($all as $clinic) {
-            if (isset($clinic['published']) && $clinic['published'] === true) {
+            $isPublic = (isset($clinic['published']) && $clinic['published'] === true)
+                || (isset($clinic['is_public']) && $clinic['is_public'] === true);
+            if ($isPublic) {
                 if ($serviceId) {
                     $services = $clinic['serviceIds'] ?? ($clinic['services'] ?? []);
                     if (! is_array($services) || ! in_array($serviceId, $services, true)) {
