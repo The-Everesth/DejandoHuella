@@ -34,5 +34,12 @@ RUN chmod -R 775 storage bootstrap/cache
 # Exponer puerto
 EXPOSE 8000
 
+# Crear y dar permisos a logs/cache
+RUN mkdir -p storage/logs bootstrap/cache && chmod -R 777 storage bootstrap/cache
+
 # Ejecutar Laravel
-CMD php artisan serve --host=0.0.0.0 --port=${PORT:-10000}
+CMD php artisan config:clear && \
+    php artisan cache:clear && \
+    php artisan view:clear && \
+    php artisan route:clear && \
+    php artisan serve --host=0.0.0.0 --port=${PORT:-10000}
