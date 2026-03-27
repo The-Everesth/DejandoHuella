@@ -3,7 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-
+use Illuminate\Support\Facades\URL;
 // Cargar helper de nombres de servicios
 require_once app_path('Helpers/ServiceNameHelper.php');
 
