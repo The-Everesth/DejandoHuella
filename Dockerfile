@@ -38,6 +38,4 @@ EXPOSE 8000
 RUN mkdir -p storage/logs bootstrap/cache && chmod -R 777 storage bootstrap/cache
 
 # Ejecutar Laravel
-CMD php artisan optimize:clear && \
-    php artisan package:discover --ansi && \
-    php artisan serve --host=0.0.0.0 --port=${PORT:-10000}
+CMD php artisan optimize:clear && php -S 0.0.0.0:${PORT:-10000} -t public
