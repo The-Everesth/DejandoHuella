@@ -52,7 +52,13 @@ class FirestoreRestClient{
         $path = config('firebase.credentials');
         if (! $path) {
             $raw = env('FIREBASE_CREDENTIALS') ?: env('FIREBASE_CREDENTIALS_PATH');
-            $path = $raw ? base_path($raw) : null;
+            if ($raw) {
+                $path = str_starts_with($raw, DIRECTORY_SEPARATOR)
+                    ? $raw
+                    : base_path($raw);
+            } else {
+                $path = null;
+            }
         }
 
         if (! $path || ! is_file($path) || ! is_readable($path)) {
