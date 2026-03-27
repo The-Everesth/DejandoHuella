@@ -12,7 +12,7 @@ class AdoptionRequestsFirestoreService
         $this->client = $client;
     }
 
-    public function createForAdoption(string $adoptionId, int $applicantId, array $data): array
+    public function createForAdoption(string $adoptionId, $applicantId, array $data): array
     {
         $requestId = $this->buildRequestId($adoptionId, $applicantId);
         $targetStatus = (string) ($data['status'] ?? 'pendiente');
@@ -132,7 +132,7 @@ class AdoptionRequestsFirestoreService
         });
     }
 
-    protected function buildRequestId(string $adoptionId, int $applicantId): string
+    protected function buildRequestId(string $adoptionId, $applicantId): string
     {
         $safeAdoptionId = preg_replace('/[^A-Za-z0-9_-]/', '_', $adoptionId) ?: 'adopcion';
 

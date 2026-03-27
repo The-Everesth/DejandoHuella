@@ -3,40 +3,35 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\SupportTicket;
-use App\Models\User;
+use App\Services\Firestore\FirestoreSupportTicketAdminService;
 use Illuminate\Http\Request;
 
 class SupportTicketAdminController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, FirestoreSupportTicketAdminService $firestoreTickets)
     {
         $q = trim((string) $request->query('q', ''));
-        $status = $request->query('status', 'pendiente'); // default
-        $priority = $request->query('priority'); // null si no viene
+        $status = $request->query('status', 'pendiente');
+        $priority = $request->query('priority');
 
-        $tickets = SupportTicket::query()
-            ->with(['user'])
-            ->when($q !== '', function ($query) use ($q) {
-                $query->where(function ($sub) use ($q) {
-                    $sub->where('subject', 'like', "%{$q}%")
-                        ->orWhere('message', 'like', "%{$q}%");
-                });
-            })
-            ->when($status && $status !== 'all', function ($query) use ($status) {
-                $query->where('status', $status);
-            })
-            ->when($priority, function ($query) use ($priority) {
-                $query->where('priority', $priority);
-            })
-            ->orderByDesc('created_at')
-            ->paginate(12)
-            ->withQueryString();
-
-        $pendingCount = SupportTicket::query()
-            ->where('status', 'pendiente')
-            ->count();
-
+        $filters = [
+            'q' => $q,
+            'status' => $status,
+            'priority' => $priority,
+        ];
+        $allTickets = collect($firestoreTickets->listAll($filters));
+        $pendingCount = $firestoreTickets->countByStatus('pendiente');
+        // Simular paginación manual (12 por página)
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = 12;
+        $tickets = $allTickets->slice(($page-1)*$perPage, $perPage);
+        $tickets = new \Illuminate\Pagination\LengthAwarePaginator(
+            $tickets,
+            $allTickets->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
         return view('admin.tickets.index', compact('tickets','q','status','priority','pendingCount'));
     }
 

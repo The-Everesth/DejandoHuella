@@ -84,7 +84,7 @@
                         <th class="p-4 font-bold">Usuario</th>
                         <th class="p-4 font-bold">Prioridad</th>
                         <th class="p-4 font-bold">Estado</th>
-                        <th class="p-4 font-bold text-right">Acción</th>
+                        <!-- <th class="p-4 font-bold text-right">Acción</th> -->
                     </tr>
                 </thead>
 
@@ -94,48 +94,56 @@
                           @php
                               // Prioridad
                               $pClass = 'bg-gray-100 text-gray-800';
-                              if ($t->priority === 'baja') $pClass = 'bg-green-100 text-green-900';
-                              if ($t->priority === 'media') $pClass = 'bg-amber-100 text-amber-900';
-                              if ($t->priority === 'alta') $pClass = 'bg-red-100 text-red-900';
+                              if (($t['priority'] ?? '') === 'baja') $pClass = 'bg-green-100 text-green-900';
+                              if (($t['priority'] ?? '') === 'media') $pClass = 'bg-amber-100 text-amber-900';
+                              if (($t['priority'] ?? '') === 'alta') $pClass = 'bg-red-100 text-red-900';
 
                               // Estado
                               $sClass = 'bg-gray-100 text-gray-800';
-                              if ($t->status === 'pendiente') $sClass = 'bg-amber-100 text-amber-900';
-                              if ($t->status === 'visto') $sClass = 'bg-blue-100 text-blue-900';
-                              if ($t->status === 'respondido') $sClass = 'bg-green-100 text-green-900';
-                              if ($t->status === 'cerrado') $sClass = 'bg-gray-200 text-gray-900';
+                              if (($t['status'] ?? '') === 'pendiente') $sClass = 'bg-amber-100 text-amber-900';
+                              if (($t['status'] ?? '') === 'visto') $sClass = 'bg-blue-100 text-blue-900';
+                              if (($t['status'] ?? '') === 'respondido') $sClass = 'bg-green-100 text-green-900';
+                              if (($t['status'] ?? '') === 'cerrado') $sClass = 'bg-gray-200 text-gray-900';
                           @endphp
 
                           <tr class="hover:bg-slate-50">
                               <td class="p-4">
-                                  <div class="font-extrabold text-slate-900">{{ $t->subject }}</div>
-                                  <div class="text-slate-600 line-clamp-1">{{ $t->message }}</div>
-                                  <div class="text-xs text-slate-500 mt-1">{{ optional($t->created_at)->format('Y-m-d H:i') }}</div>
+                                  <div class="font-extrabold text-slate-900">{{ $t['subject'] ?? '' }}</div>
+                                  <div class="text-slate-600 line-clamp-1">{{ $t['message'] ?? '' }}</div>
+                                  <div class="text-xs text-slate-500 mt-1">
+                                    @php
+                                      $createdAt = $t['created_at'] ?? null;
+                                      try {
+                                        $date = $createdAt ? \Carbon\Carbon::parse($createdAt) : null;
+                                      } catch (Exception $e) { $date = null; }
+                                    @endphp
+                                    {{ $date ? $date->format('Y-m-d H:i') : '' }}
+                                  </div>
                               </td>
 
                               <td class="p-4 text-slate-700">
-                                  <div class="font-bold">{{ $t->user?->name ?? '—' }}</div>
-                                  <div class="text-slate-500 text-xs">{{ $t->user?->email ?? '' }}</div>
+                                  <div class="font-bold">{{ $t['user_id'] ?? '—' }}</div>
                               </td>
 
                               <td class="p-4">
                                   <span class="px-3 py-1 rounded-full font-bold {{ $pClass }}">
-                                      {{ strtoupper($t->priority ?? '—') }}
+                                      {{ strtoupper($t['priority'] ?? '—') }}
                                   </span>
                               </td>
 
                               <td class="p-4">
                                   <span class="px-3 py-1 rounded-full font-bold {{ $sClass }}">
-                                      {{ strtoupper($t->status ?? '—') }}
+                                      {{ strtoupper($t['status'] ?? '—') }}
                                   </span>
                               </td>
-
+                                <!--
                               <td class="p-4 text-right">
-                                  <a class="inline-flex items-center justify-center px-4 py-2 rounded-full font-bold border transition bg-white text-slate-900 border-slate-200 hover:bg-slate-50"
-                                    href="{{ route('admin.tickets.show', $t) }}">
+                                  <a class="inline-flex items-center justify-center px-4 py-2 rounded-full font-bold border transition bg-white text-slate-900 border-slate-200 hover:bg-slate-50 opacity-50 cursor-not-allowed"
+                                    href="#">
                                       Ver
                                   </a>
                               </td>
+                                -->
                           </tr>
                       @endforeach
                   @else
