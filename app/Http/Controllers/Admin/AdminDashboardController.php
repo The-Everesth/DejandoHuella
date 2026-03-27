@@ -28,16 +28,12 @@ class AdminDashboardController extends Controller
             ->whereIn('requested_role', ['veterinario', 'refugio'])
             ->count();
 
-        // Tickets abiertos 
-        $openTickets = SupportTicket::query()
-            ->where('status', 'open')
-            ->count();
-
-        $pendingTickets = SupportTicket::where('status', 'pendiente')->count();
+        // Temporal: desactivar conteos dependientes de MySQL en producción
+        $openTickets = 0;
+        $pendingTickets = 0;
+        $pendingAppointments = 0;
 
         $pendingRoleRequests = $users->where('role_request_status', 'pending')->count();
-
-        $pendingAppointments = Appointment::where('status', 'pendiente')->count();
 
         $adoptionDocuments = collect($this->adoptions->list())->values();
         $publisherIds = $adoptionDocuments
