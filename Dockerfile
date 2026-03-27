@@ -20,7 +20,7 @@ WORKDIR /var/www
 COPY . .
 
 # Instalar dependencias PHP
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Instalar dependencias frontend
 RUN npm install
@@ -38,8 +38,6 @@ EXPOSE 8000
 RUN mkdir -p storage/logs bootstrap/cache && chmod -R 777 storage bootstrap/cache
 
 # Ejecutar Laravel
-CMD php artisan config:clear && \
-    php artisan cache:clear && \
-    php artisan view:clear && \
-    php artisan route:clear && \
+CMD php artisan optimize:clear && \
+    php artisan package:discover --ansi && \
     php artisan serve --host=0.0.0.0 --port=${PORT:-10000}
