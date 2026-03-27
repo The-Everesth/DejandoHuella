@@ -841,9 +841,20 @@ class AdoptionsController extends Controller
             unset($validated['fotoMascota']); // Nunca guardar la ruta temporal ni el archivo
             unset($validated['imagePath']); // No usar almacenamiento local
 
-            // Guardar la solicitud de adopción usando el método correcto
+            // Validar usuario autenticado y con ID válido
             $user = auth()->user();
-            $applicantId = $user ? (int) $user->id : 0;
+            if (! $user || !isset($user->id) || empty($user->id)) {
+                \Log::warning('Intento de crear solicitud de adopción sin usuario válido', [
+                    'user' => $user,
+                    'adoption_id' => $id,
+                    'validated' => $validated
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo registrar la solicitud de adopción: usuario no autenticado o ID inválido.'
+                ], 401);
+            }
+            $applicantId = (string) $user->id;
             $result = $this->adoptionRequests->createForAdoption($id, $applicantId, $validated);
             if (! $result) {
                 return response()->json([
