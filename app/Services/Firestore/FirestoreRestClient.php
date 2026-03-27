@@ -305,6 +305,21 @@ class FirestoreRestClient{
             $resp = $e->getResponse();
             $status = $resp ? $resp->getStatusCode() : null;
             $body = $resp ? (string)$resp->getBody() : null;
+            if ($status === 429) {
+                // Manejo especial para cuota excedida
+                Log::error('Firestore quota exceeded (429)', [
+                    'method' => $method,
+                    'url' => $url,
+                    'status' => $status,
+                    'body' => $body,
+                    'message' => $e->getMessage(),
+                ]);
+                // Puedes personalizar el mensaje o lanzar una excepción propia
+                return [
+                    'error' => true,
+                    'message' => 'Se ha excedido la cuota de Firestore. Por favor, intenta más tarde o contacta al administrador.'
+                ];
+            }
             Log::error('Firestore request failed', [
                 'method' => $method,
                 'url' => $url,

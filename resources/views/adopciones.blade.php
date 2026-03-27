@@ -886,7 +886,8 @@
                         const canModifyThisAdoption = CAN_MANAGE_ALL_ADOPTIONS || isOwner;
                         const canEditAction = Boolean(CAN_REGISTER_ADOPTION && canModifyThisAdoption && rawAdoptionId);
                         const hasExistingRequest = CAN_REQUEST_ADOPTION && rawAdoptionId !== '' && requestedAdoptionIds.has(rawAdoptionId);
-                        const canRequestAction = Boolean(!CAN_REGISTER_ADOPTION && CAN_REQUEST_ADOPTION && rawAdoptionId && !hasExistingRequest);
+                        // Forzar que el botón de solicitar adopción esté disponible para ciudadanos si no hay solicitud previa
+                        const canRequestAction = Boolean(CAN_REQUEST_ADOPTION && rawAdoptionId && !hasExistingRequest);
                         const hasActionButton = canEditAction || canRequestAction;
                         const nombreAnimalRaw = normalizeText(adopcion.nombreAnimal, 'Mascota sin nombre');
                         const tipoAnimalRaw = normalizeText(adopcion.tipoAnimal, 'Tipo no especificado');
@@ -960,11 +961,10 @@
                                         : canRequestAction
                                         ? `<button
                                             type="button"
-                                            class="request-adoption inline-flex items-center justify-center rounded-full bg-teal-700 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-700/30 ring-2 ring-teal-300 transition hover:bg-teal-800 hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-300 ${rawAdoptionId ? '' : 'opacity-50 cursor-not-allowed'}"
+                                            class="request-adoption inline-flex items-center justify-center rounded-full bg-teal-700 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-700/30 ring-2 ring-teal-300 transition hover:bg-teal-800 hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-300"
                                             data-id="${adoptionId}"
                                             data-name="${escapeAttr(normalizeText(adopcion.nombreAnimal, ''))}"
                                             title="Abrir formulario de solicitud"
-                                            ${rawAdoptionId ? '' : 'disabled'}
                                         >
                                             Solicitar adopción
                                         </button>`
@@ -986,11 +986,12 @@
         }
 
         // Cargar adopciones al iniciar
+
         setupFormAccess();
         loadAdopciones();
 
-        // Recargar adopciones cada 3 segundos
-        setInterval(loadAdopciones, 3000);
+        // Botón manual para actualizar adopciones
+        // (Botón manual de actualización deshabilitado)
 
         if (CLOSE_IMAGE_PREVIEW_MODAL) {
             CLOSE_IMAGE_PREVIEW_MODAL.addEventListener('click', closeImagePreview);
@@ -1080,28 +1081,26 @@
             }
 
             const requestBtn = event.target.closest('.request-adoption');
-            if (requestBtn && !requestBtn.disabled) {
+            if (requestBtn) {
+                console.log('Click en botón Solicitar adopción', requestBtn.dataset);
                 if (!IS_AUTHENTICATED) {
                     showAlert('Debes iniciar sesión para solicitar una adopción', 'error');
                     return;
                 }
-
                 if (!CAN_REQUEST_ADOPTION) {
                     showAlert('Solo usuarios con rol ciudadano pueden enviar solicitudes', 'error');
                     return;
                 }
-
                 const adoptionId = requestBtn.dataset.id;
                 if (!adoptionId) {
                     showAlert('No se pudo identificar la mascota', 'error');
                     return;
                 }
-
                 if (requestedAdoptionIds.has(String(adoptionId).trim())) {
                     showAlert('Ya enviaste una solicitud para esta mascota.', 'error');
                     return;
                 }
-
+                // Forzar apertura del modal
                 openAdoptionRequestModal(adoptionId, requestBtn.dataset.name || 'esta mascota');
                 return;
             }

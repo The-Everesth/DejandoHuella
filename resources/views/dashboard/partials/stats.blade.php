@@ -39,7 +39,7 @@ $role = $mainRole;
     @elseif($role === 'refugio' || $role === 'institucion')
         <div class="bg-white rounded-lg shadow p-6 flex flex-col items-center">
             <div class="text-gray-500 font-semibold">Publicaciones de adopción</div>
-            <div class="text-3xl font-bold mt-2">{{ $adoptionPostsCount ?? 0 }}</div>
+            <div class="text-3xl font-bold mt-2">{{ $adoptionsCount ?? 0 }}</div>
         </div>
         <div class="bg-white rounded-lg shadow p-6 flex flex-col items-center">
             <div class="text-gray-500 font-semibold">Solicitudes pendientes</div>

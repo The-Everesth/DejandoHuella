@@ -23,21 +23,21 @@ class UserRoleController extends Controller
 
     public function index(Request $request)
     {
-        // DEBUG: Mostrar usuario autenticado y roles
-        $user = auth()->user();
-        $roles = method_exists($user, 'getRoleNames') ? $user->getRoleNames() : ($user->role ?? null);
-        dd([
-            'user' => $user,
-            'roles' => $roles,
-        ]);
+        // $user = auth()->user();
+        // $roles = method_exists($user, 'getRoleNames') ? $user->getRoleNames() : ($user->role ?? null);
+        // dd([
+        //     'user' => $user,
+        //     'roles' => $roles,
+        // ]);
 
         $q = trim((string) $request->query('q', ''));
         $role = $request->query('role');       // admin|veterinario|refugio|ciudadano
         $status = $request->query('status');   // pending|approved|rejected|all
         $trashed = $request->query('trashed'); // null|with|only
 
-            // Listar usuarios desde Firestore
-            $allUsers = collect(app(\App\Services\Firestore\UsersFirestoreService::class)->list());
+            // Listar usuarios desde Firestore y convertir a instancias de FirestoreAuthenticatableUser
+            $allUsers = collect(app(\App\Services\Firestore\UsersFirestoreService::class)->list())
+                ->map(fn($u) => $u instanceof \App\Models\FirestoreAuthenticatableUser ? $u : new \App\Models\FirestoreAuthenticatableUser($u));
             // Filtros manuales
             if ($trashed === 'only') {
                 $allUsers = $allUsers->whereNotNull('deleted_at')->values();
