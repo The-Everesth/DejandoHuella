@@ -77,7 +77,7 @@
 
                 <tbody class="divide-y">
                     @forelse($users as $u)
-                        <tr class="hover:bg-slate-50 {{ $u->trashed() ? 'opacity-70' : '' }}">
+                        <tr class="hover:bg-slate-50 {{ ($u->status ?? null) === 'inactive' ? 'opacity-70' : '' }}">
                             <td class="p-4">
                                 <div class="font-extrabold text-slate-900">{{ $u->name }}</div>
                                 <div class="text-slate-600">{{ $u->email }}</div>
@@ -100,8 +100,8 @@
                                 <div class="flex flex-col gap-2">
                                     {{-- Estado del usuario --}}
                                     <span class="px-3 py-1 rounded-full font-bold w-fit
-                                        {{ $u->trashed() ? 'bg-red-100 text-red-900' : 'bg-green-100 text-green-900' }}">
-                                        {{ $u->trashed() ? 'Inactivo' : 'Activo' }}
+                                        {{ ($u->status ?? null) === 'inactive' ? 'bg-red-100 text-red-900' : 'bg-green-100 text-green-900' }}">
+                                        {{ ($u->status ?? null) === 'inactive' ? 'Inactivo' : 'Activo' }}
                                     </span>
 
                                     {{-- Estado de solicitud de rol --}}
@@ -129,22 +129,22 @@
                             </td>
 
                             <td class="p-4 text-slate-600">
-                                {{ $u->created_at->format('Y-m-d') }}
+                                {{ $u->created_at ? (method_exists($u->created_at, 'format') ? $u->created_at->format('Y-m-d') : (is_string($u->created_at) ? \Carbon\Carbon::parse($u->created_at)->format('Y-m-d') : $u->created_at)) : '-' }}
                             </td>
 
                             <td class="p-4">
                                 <div class="flex justify-end gap-2 flex-wrap">
                                     @php($isMe = auth()->id() === $u->id)
 
-                                    <a href="{{ route('admin.users.role.edit', $u) }}">
+                                    <a href="{{ route('admin.users.role.edit', $u->id) }}">
                                         <x-button variant="outline">Rol</x-button>
                                     </a>
 
-                                    <a href="{{ route('admin.users.edit', $u) }}">
+                                    <a href="{{ route('admin.users.edit', $u->id) }}">
                                         <x-button variant="outline">Editar</x-button>
                                     </a>
 
-                                    @if($u->trashed())
+                                    @if(($u->status ?? null) === 'inactive')
                                         <form method="POST" action="{{ route('admin.users.restore', $u->id) }}"
                                               onsubmit="return confirm('¿Restaurar este usuario?');">
                                             @csrf
@@ -155,7 +155,7 @@
                                             </button>
                                         </form>
                                     @else
-                                        <form method="POST" action="{{ route('admin.users.destroy', $u) }}"
+                                        <form method="POST" action="{{ route('admin.users.destroy', $u->id) }}"
                                               onsubmit="return confirm('¿Desactivar este usuario?');">
                                             @csrf
                                             @method('DELETE')

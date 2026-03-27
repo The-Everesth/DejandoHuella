@@ -247,10 +247,19 @@
         }
 
         // Cargar adopciones al iniciar
+
         loadAdopciones();
 
-        // Recargar adopciones cada 3 segundos
-        setInterval(loadAdopciones, 3000);
+        // Botón manual para actualizar adopciones
+        const updateBtn = document.createElement('button');
+        updateBtn.textContent = 'Actualizar lista';
+        updateBtn.className = 'mb-4 bg-brand hover:bg-teal-800 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out transform hover:scale-105 active:scale-95';
+        updateBtn.type = 'button';
+        updateBtn.addEventListener('click', loadAdopciones);
+        const adopcionListParent = document.getElementById('adopcionList')?.parentElement;
+        if (adopcionListParent) {
+            adopcionListParent.insertBefore(updateBtn, adopcionListParent.firstChild);
+        }
 
         // Agregar evento para el formulario
         document.getElementById('adopcionForm').addEventListener('submit', async function (event) {

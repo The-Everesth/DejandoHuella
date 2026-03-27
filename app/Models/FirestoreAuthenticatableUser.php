@@ -5,8 +5,17 @@ namespace App\Models;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Auth\Authenticatable;
 
-class FirestoreAuthenticatableUser implements AuthenticatableContract
-{
+class FirestoreAuthenticatableUser implements AuthenticatableContract{
+    public function getKeyName()
+    {
+        return 'id';
+    }
+
+    public function getKey()
+    {
+        return $this->id;
+    }
+
     use Authenticatable;
 
     // Duplicated user fields (from User DTO)

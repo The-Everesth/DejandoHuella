@@ -96,7 +96,7 @@ class AdoptionsFirestoreService
         $normalized['raza'] = $doc['raza'] ?? $doc['breed'] ?? 'No especificada';
         $normalized['detalles'] = $doc['detalles'] ?? $doc['description'] ?? '';
         $normalized['fecha'] = $doc['fecha'] ?? $doc['createdAt'] ?? $doc['created_at'] ?? now()->toIso8601String();
-        $normalized['createdBy'] = is_null($createdBy) ? null : (int) $createdBy;
+        $normalized['createdBy'] = $createdBy;
         $normalized['isHidden'] = $doc['isHidden'] ?? $doc['hidden'] ?? false;
 
         $normalized['imagePath'] = $this->resolveImagePath($doc);

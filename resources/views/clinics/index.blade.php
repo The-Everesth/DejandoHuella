@@ -70,7 +70,16 @@ async function loadClinics() {
 document.addEventListener('DOMContentLoaded', () => {
     loadServices().then(loadClinics);
     document.getElementById('searchBtn').addEventListener('click', loadClinics);
-    // auto-refresh cada 3 segundos al estilo adopciones
-    setInterval(loadClinics, 3000);
+
+    // Botón manual para actualizar clínicas
+    const updateBtn = document.createElement('button');
+    updateBtn.textContent = 'Actualizar lista';
+    updateBtn.className = 'ml-2 bg-teal-700 text-white px-4 py-2 rounded hover:bg-teal-800 transition';
+    updateBtn.type = 'button';
+    updateBtn.addEventListener('click', loadClinics);
+    const filterRow = document.querySelector('.mb-4.flex');
+    if (filterRow) {
+        filterRow.appendChild(updateBtn);
+    }
 });
 </script>

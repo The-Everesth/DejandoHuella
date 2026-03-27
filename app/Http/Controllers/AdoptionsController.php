@@ -187,9 +187,16 @@ class AdoptionsController extends Controller
             abort(403, 'Solo usuarios con rol veterinario o refugio pueden ver sus adopciones.');
         }
 
+
+        // Obtener UID de Firebase del usuario autenticado
+        $usersService = app(\App\Services\Firestore\UsersFirestoreService::class);
+        $docId = $usersService->getUserDocId($user->id);
+        $firestoreUser = $usersService->getUserByDocId($docId);
+        $firebaseUid = isset($firestoreUser['uid']) ? (string)$firestoreUser['uid'] : $docId;
+
         $myAdoptions = [];
         foreach ($this->firebase->list() as $docId => $adoption) {
-            if ((int) ($adoption['createdBy'] ?? 0) !== (int) $user->id) {
+            if ((string) ($adoption['createdBy'] ?? '') !== $firebaseUid) {
                 continue;
             }
 
@@ -404,7 +411,13 @@ class AdoptionsController extends Controller
             $validated['fecha'] = now()->toIso8601String();
             $validated['estado'] = 'pendiente';
             $validated['id'] = uniqid('adoption_');
-            $validated['createdBy'] = (int) auth()->id();
+            // Obtener UID de Firestore
+            $user = auth()->user();
+            $usersService = app(\App\Services\Firestore\UsersFirestoreService::class);
+            $docId = $usersService->getUserDocId($user->id);
+            $firestoreUser = $usersService->getUserByDocId($docId);
+            $firebaseUid = isset($firestoreUser['uid']) ? (string)$firestoreUser['uid'] : $docId;
+            $validated['createdBy'] = $firebaseUid;
 
             // Subir la imagen a Cloudinary si existe
             if ($request->hasFile('fotoMascota')) {
@@ -518,7 +531,13 @@ class AdoptionsController extends Controller
             $data['fecha'] = now()->toIso8601String();
             $data['estado'] = 'pendiente';
             $data['id'] = uniqid('adoption_');
-            $data['createdBy'] = (int) auth()->id();
+            // Obtener UID de Firestore
+            $user = auth()->user();
+            $usersService = app(\App\Services\Firestore\UsersFirestoreService::class);
+            $docId = $usersService->getUserDocId($user->id);
+            $firestoreUser = $usersService->getUserByDocId($docId);
+            $firebaseUid = isset($firestoreUser['uid']) ? (string)$firestoreUser['uid'] : $docId;
+            $data['createdBy'] = $firebaseUid;
 
             if ($request->hasFile('fotoMascota')) {
                 $upload = $request->file('fotoMascota');
@@ -771,32 +790,24 @@ class AdoptionsController extends Controller
      */
     public function storeRequest(Request $request, string $id)
     {
-        $validated = $request->validate([
-            'nombreCompleto' => 'required|string|max:255',
-            'direccionCiudad' => 'required|string|max:255',
-            'tipoVivienda' => 'required|string|in:casa,apartamento,otro',
-            'experienciaMascotas' => 'required|string|max:2000',
-            'patioJardin' => 'required|string|in:si,no',
-            'hogarIntegrantes' => 'required|array|min:1',
-            'hogarIntegrantes.*' => 'required|string|in:adultos,ninos,movilidad_reducida,otros',
-            'hogarIntegrantesOtros' => 'nullable|string|max:255',
-            'tieneOtrosAnimales' => 'required|string|in:si,no',
-            'tiposOtrosAnimales' => 'nullable|string|max:255|required_if:tieneOtrosAnimales,si',
-            'otrosAnimalesEsterilizados' => 'nullable|string|in:si,no|required_if:tieneOtrosAnimales,si',
-            'tuvoMascotasAntes' => 'required|string|in:si,no',
-            'detalleMascotasAnteriores' => 'nullable|string|max:2000|required_if:tuvoMascotasAntes,si',
-            'dispuestoAtencionVeterinaria' => 'required|string|in:si,no',
-            'telefono' => 'required|string|max:40',
-            'mensaje' => 'required|string|max:2000',
-        ]);
-
         try {
-            $roleError = $this->ensurePublisherRole();
-            if ($roleError) {
-                return $roleError;
-            }
-
             $validated = $request->validate([
+                'nombreCompleto' => 'required|string|max:255',
+                'direccionCiudad' => 'required|string|max:255',
+                'tipoVivienda' => 'required|string|in:casa,apartamento,otro',
+                'experienciaMascotas' => 'required|string|max:2000',
+                'patioJardin' => 'required|string|in:si,no',
+                'hogarIntegrantes' => 'required|array|min:1',
+                'hogarIntegrantes.*' => 'required|string|in:adultos,ninos,movilidad_reducida,otros',
+                'hogarIntegrantesOtros' => 'nullable|string|max:255',
+                'tieneOtrosAnimales' => 'required|string|in:si,no',
+                'tiposOtrosAnimales' => 'nullable|string|max:255|required_if:tieneOtrosAnimales,si',
+                'otrosAnimalesEsterilizados' => 'nullable|string|in:si,no|required_if:tieneOtrosAnimales,si',
+                'tuvoMascotasAntes' => 'required|string|in:si,no',
+                'detalleMascotasAnteriores' => 'nullable|string|max:2000|required_if:tuvoMascotasAntes,si',
+                'dispuestoAtencionVeterinaria' => 'required|string|in:si,no',
+                'telefono' => 'required|string|max:40',
+                'mensaje' => 'required|string|max:2000',
                 'nombreAnimal' => 'sometimes|string|max:255',
                 'tipoAnimal' => 'sometimes|string|max:100',
                 'sexo' => 'sometimes|string|in:hembra,macho',
@@ -807,61 +818,45 @@ class AdoptionsController extends Controller
                 'fotoMascota' => 'nullable|image|max:4096',
             ]);
 
-            try {
-                $adopcion = $this->firebase->get($id);
-                if (! is_array($adopcion)) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Adopción no encontrada'
-                    ], 404);
-                }
-
-                $authorizationError = $this->forbidIfCannotManageAdoption($adopcion);
-                if ($authorizationError) {
-                    return $authorizationError;
-                }
-
-                // Si viene una nueva foto en el formulario de edición, la subimos a Cloudinary
-                if ($request->hasFile('fotoMascota')) {
-                    $photoFile = $request->file('fotoMascota');
-                    if ($photoFile && $photoFile->isValid()) {
-                        $cloudinary = app(CloudinaryService::class);
-                        $secureUrl = $cloudinary->uploadImage($photoFile, 'adoptions');
-                        if ($secureUrl) {
-                            $validated['imageUrl'] = $secureUrl;
-                        }
-                    }
-                }
-
-                unset($validated['fotoMascota']); // Nunca guardar la ruta temporal ni el archivo
-                unset($validated['imagePath']); // No usar almacenamiento local
-
-                $updated = $this->firebase->update($id, $validated);
-                if (! $updated) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Adopción no encontrada'
-                    ], 404);
-                }
-
-                $adopcion = $this->firebase->get($id);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Adopción actualizada correctamente',
-                    'data' => $adopcion
-                ]);
-            } catch (\Exception $e) {
+            $adopcion = $this->firebase->get($id);
+            if (! is_array($adopcion)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error: ' . $e->getMessage()
+                    'message' => 'Adopción no encontrada'
+                ], 404);
+            }
+
+            // Si viene una nueva foto en el formulario de edición, la subimos a Cloudinary
+            if ($request->hasFile('fotoMascota')) {
+                $photoFile = $request->file('fotoMascota');
+                if ($photoFile && $photoFile->isValid()) {
+                    $cloudinary = app(CloudinaryService::class);
+                    $secureUrl = $cloudinary->uploadImage($photoFile, 'adoptions');
+                    if ($secureUrl) {
+                        $validated['imageUrl'] = $secureUrl;
+                    }
+                }
+            }
+
+            unset($validated['fotoMascota']); // Nunca guardar la ruta temporal ni el archivo
+            unset($validated['imagePath']); // No usar almacenamiento local
+
+            // Guardar la solicitud de adopción usando el método correcto
+            $user = auth()->user();
+            $applicantId = $user ? (int) $user->id : 0;
+            $result = $this->adoptionRequests->createForAdoption($id, $applicantId, $validated);
+            if (! $result) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo registrar la solicitud de adopción'
                 ], 500);
             }
-        } catch (\RuntimeException $e) {
+
             return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 409);
+                'success' => true,
+                'message' => 'Solicitud de adopción registrada correctamente',
+                'data' => $result
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

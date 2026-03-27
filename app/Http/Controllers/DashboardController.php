@@ -265,6 +265,13 @@ class DashboardController extends Controller
                     }
                 }
             }
+            // DEBUG: Mostrar datos de adopciones y solicitudes para el usuario refugio
+            if (in_array($mainRole, ['refugio', 'institucion'])) {
+                \Log::info('[DEBUG Dashboard] Usuario: ' . ($user->uid ?? $user->id));
+                \Log::info('[DEBUG Dashboard] Adopciones encontradas: ', $myAdoptions->toArray());
+                \Log::info('[DEBUG Dashboard] Solicitudes encontradas: ', $adoptionRequests);
+                \Log::info('[DEBUG Dashboard] Solicitudes pendientes: ', $pendingRequests->toArray());
+            }
             // PAGINACIÓN MANUAL (colección, no Eloquent):
             $page = request()->input('adopciones_page', 1);
             $perPage = 6;
@@ -300,7 +307,7 @@ class DashboardController extends Controller
                 ]
             );
             $data += [
-                'adoptionPostsCount' => $myAdoptions->count(),
+                'adoptionsCount' => $myAdoptions->count(),
                 'pendingRequestsCount' => $pendingRequests->count(),
                 'adoptionsPaginator' => $paginator,
                 'recentRequests' => $pendingRequests->sortByDesc('createdAt')->take(6),
