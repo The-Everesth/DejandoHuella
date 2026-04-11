@@ -16,35 +16,22 @@ class LoginRequest extends FormRequest
     /**
      * Determine if the user is authorized to make this request.
      */
-    public function authorize(): bool
-    {
-        return true;
-    }
-
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\Rule|array|string>
-     */
-    public function rules(): array
-    {
-        return [
-            'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'string'],
-        ];
-    }
-
-    /**
-     * Attempt to authenticate the request's credentials.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
 
         $credentials = $this->only('email', 'password');
         $remember = $this->boolean('remember');
+
+        // Validación previa: usuario desactivado
+        $firestoreService = app(\App\Services\Firestore\UsersFirestoreService::class);
+        $user = $firestoreService->getUserByEmail($this->input('email'));
+        if ($user && (isset($user['status']) && $user['status'] !== 'active')) {
+            RateLimiter::hit($this->throttleKey());
+            throw ValidationException::withMessages([
+                'email' => 'Tu cuenta ha sido suspendida temporalmente. Si crees que se trata de un error, contacta al administrador.',
+            ]);
+        }
 
         if (! Auth::attempt($credentials, $remember)) {
             try {
@@ -60,7 +47,6 @@ class LoginRequest extends FormRequest
 
         if (! Auth::attempt($credentials, $remember)) {
             RateLimiter::hit($this->throttleKey());
-
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);

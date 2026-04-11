@@ -66,7 +66,7 @@
           </div>
           <div class="text-gray-600 text-sm truncate">{{ \Illuminate\Support\Str::limit($t['message'] ?? '', 120) }}</div>
           <div class="flex justify-end">
-            <a href="#" class="text-blue-600 hover:underline text-sm font-medium opacity-50 cursor-not-allowed">Ver detalle</a>
+            <a href="{{ route('tickets.show', $t['id']) }}" class="text-blue-600 hover:underline text-sm font-medium">Ver detalle</a>
           </div>
         </div>
       @endforeach

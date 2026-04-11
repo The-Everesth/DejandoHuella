@@ -95,7 +95,15 @@ class UsersFirestoreService
      */
     public function list(): array
     {
-        return $this->client->listDocs($this->collection);
+        $users = $this->client->listDocs($this->collection);
+        // Mapear createdAt (Firestore) a created_at (Laravel)
+        foreach ($users as &$user) {
+            if (isset($user['createdAt']) && empty($user['created_at'])) {
+                $user['created_at'] = $user['createdAt'];
+            }
+        }
+        unset($user);
+        return $users;
     }
 
     /**
@@ -146,5 +154,23 @@ class UsersFirestoreService
         }
 
         return 'user';
+    }
+        /**
+     * Busca un usuario por email en Firestore.
+     * @param string $email
+     * @return array|null
+     */
+    public function getUserByEmail(string $email): ?array
+    {
+        $users = $this->list();
+        foreach ($users as $user) {
+            if (
+                isset($user['email']) &&
+                strtolower($user['email']) === strtolower($email)
+            ) {
+                return $user;
+            }
+        }
+        return null;
     }
 }

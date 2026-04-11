@@ -24,9 +24,11 @@ class AdminDashboardController extends Controller
         $usersCount = $users->whereNull('deleted_at')->count();
 
         // Solicitudes pendientes (rol veterinario/refugio)
+        /*
         $pendingUsers = $users->where('role_request_status', 'pending')
             ->whereIn('requested_role', ['veterinario', 'refugio'])
             ->count();
+        */
 
         // Temporal: desactivar conteos dependientes de MySQL en producción
         $openTickets = 0;
@@ -66,7 +68,7 @@ class AdminDashboardController extends Controller
             'pendingRoleRequests',
             'pendingAppointments',
             'usersCount',
-            'pendingUsers',
+            //'pendingUsers',
             'openTickets',
             'visibleAdoptionsCount',
             'hiddenAdoptionsCount',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\Firestore\FirestoreSupportTicketAdminService;
 use Illuminate\Http\Request;
+use App\Models\SupportTicket;
 
 class SupportTicketAdminController extends Controller
 {
@@ -35,42 +36,54 @@ class SupportTicketAdminController extends Controller
         return view('admin.tickets.index', compact('tickets','q','status','priority','pendingCount'));
     }
 
-    public function show(SupportTicket $ticket)
+    public function show($ticketId, FirestoreSupportTicketAdminService $firestoreTickets)
     {
-        $this->authorize('update', $ticket);
-
-        // marcar como visto si estaba pendiente
-        if ($ticket->status === 'pendiente') {
-            $ticket->update([
-                'status' => 'visto',
-                'seen_at' => now(),
-            ]);
+        // Buscar el ticket en Firestore por su id
+        $ticket = collect($firestoreTickets->listAll())->firstWhere('id', $ticketId);
+        if (!$ticket) {
+            abort(404);
         }
 
-        $ticket->load(['user', 'answeredBy']);
+        // Aquí puedes agregar lógica de autorización si es necesario
+
+        // marcar como visto si estaba pendiente
+        if (($ticket['status'] ?? null) === 'pendiente') {
+            $firestoreTickets->update($ticketId, [
+                'status' => 'visto',
+                'seen_at' => now()->toDateTimeString(),
+            ]);
+            $ticket['status'] = 'visto';
+            $ticket['seen_at'] = now()->toDateTimeString();
+        }
+
+        // Si necesitas cargar usuario o admin, deberás hacerlo manualmente aquí
 
         return view('admin.tickets.show', compact('ticket'));
     }
 
-    public function reply(Request $request, SupportTicket $ticket)
+    public function reply(Request $request, $ticketId, FirestoreSupportTicketAdminService $firestoreTickets)
     {
-        $this->authorize('update', $ticket);
-
         $data = $request->validate([
-            'admin_reply' => ['required', 'string', 'max:2000'],
+            'admin_reply' => 'required|string',
         ]);
 
-        /** @var User $admin */
         $admin = auth()->user();
 
-        $ticket->update([
+        // Buscar el ticket manualmente en Firestore
+        $ticket = collect($firestoreTickets->listAll())->firstWhere('id', $ticketId);
+        if (!$ticket) {
+            abort(404);
+        }
+
+        $firestoreTickets->update($ticketId, [
             'admin_reply' => $data['admin_reply'],
             'answered_by' => $admin->id,
-            'answered_at' => now(),
+            'answered_at' => now()->toDateTimeString(),
             'status' => 'respondido',
         ]);
 
-        return back()->with('success', 'Respuesta enviada.');
+        return redirect()->route('admin.tickets.show', $ticketId)
+            ->with('success', 'Respuesta guardada correctamente.');
     }
 
     public function close(SupportTicket $ticket)

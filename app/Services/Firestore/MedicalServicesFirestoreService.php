@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services\Firestore;
 
 class MedicalServicesFirestoreService
@@ -84,5 +83,19 @@ class MedicalServicesFirestoreService
             $created++;
         }
         return $created;
+    }
+    public function createService(array $data): array
+    {
+        return $this->client->createDoc($this->collection, null, $data);
+    }
+
+    public function updateService(string $id, array $data): array
+    {
+        return $this->client->patchDoc($this->collection, $id, $data);
+    }
+
+    public function deleteService(string $id): void
+    {
+        $this->client->deleteDoc($this->collection, $id);
     }
 }

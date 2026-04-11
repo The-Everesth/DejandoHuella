@@ -40,5 +40,26 @@ class SupportTicketController extends Controller
         return redirect()->route('tickets.index')->with('success', 'Mensaje enviado. Un administrador lo revisará.');
     }
 
-    // La vista de detalle de ticket debe ser adaptada a Firestore si se requiere
+    public function show($ticketId, FirestoreSupportTicketService $firestoreTickets)
+    {
+        $user = auth()->user();
+        $ticket = collect($firestoreTickets->listByUser($user->id))->firstWhere('id', $ticketId);
+
+        if (!$ticket) {
+            abort(404);
+        }
+
+        return view('tickets.show', compact('ticket'));
+    }
+    /**
+     * Permite a un admin ver cualquier ticket por su ID (sin importar el usuario).
+     */
+    public function showAdmin($ticketId, \App\Services\Firestore\FirestoreSupportTicketAdminService $firestoreTickets)
+    {
+        $ticket = collect($firestoreTickets->listAll())->firstWhere('id', $ticketId);
+        if (!$ticket) {
+            abort(404);
+        }
+        return view('admin.tickets.show', compact('ticket'));
+    }
 }

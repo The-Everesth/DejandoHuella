@@ -23,9 +23,17 @@ class ClinicController extends Controller
         // Leer clínicas del veterinario autenticado desde Firestore
         $userId = auth()->id();
         $allClinics = $this->clinicsFirestore->list();
+        // Asegura que cada clínica tenga el campo 'id' correcto (clave del documento)
         $clinics = collect($allClinics)
             ->filter(function ($clinic) use ($userId) {
                 return isset($clinic['userId']) && $clinic['userId'] == $userId;
+            })
+            ->map(function ($clinic, $key) {
+                // Si no tiene 'id', intenta usar la clave del documento
+                if (!isset($clinic['id'])) {
+                    $clinic['id'] = $clinic['__name__'] ?? $key;
+                }
+                return $clinic;
             })
             ->values();
 
@@ -84,7 +92,7 @@ class ClinicController extends Controller
         $clinic = $this->clinicsFirestore->getClinicById($clinicId);
         $userId = auth()->id();
         abort_unless($clinic && (isset($clinic['userId']) && $clinic['userId'] == $userId), 403);
-        return view('vet.clinics.edit', ['clinic' => (object)$clinic]);
+        return view('vet.clinics.edit', ['clinic' => $clinic]);
     }
 
     public function update(Request $request, $clinicId)

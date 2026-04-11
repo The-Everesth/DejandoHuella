@@ -45,11 +45,17 @@ class ClinicsFirestoreService{
             'userId' => $userId,
             'dataKeys' => array_keys($data)
         ]);
-        $this->client->createDoc($this->collection, $id, $data);
-        Log::info('ClinicsFirestoreService::createOrUpdateClinicForVet() - createDoc completed, fetching document');
+        // Si el documento ya existe, usar PATCH, si no, usar POST
+        $existing = $this->client->getDoc($this->collection, $id);
+        if ($existing) {
+            $this->client->patchDoc($this->collection, $id, $data);
+        } else {
+            $this->client->createDoc($this->collection, $id, $data);
+        }
+        Log::info('ClinicsFirestoreService::createOrUpdateClinicForVet() - create/update completed, fetching document');
         $result = $this->client->getDoc($this->collection, $id);
         if (!$result) {
-            Log::warning('ClinicsFirestoreService::createOrUpdateClinicForVet() - getDoc returned null after create, returning submitted data');
+            Log::warning('ClinicsFirestoreService::createOrUpdateClinicForVet() - getDoc returned null after create/update, returning submitted data');
             return $data;
         }
         Log::info('ClinicsFirestoreService::createOrUpdateClinicForVet() - Document fetched successfully', [
