@@ -40,4 +40,10 @@ class Clinic extends Model
         return $relation->withTimestamps();
     }
 
+    // Relación directa para servicios médicos gestionados por el veterinario
+    public function medicalServices()
+    {
+        return $this->hasMany(MedicalService::class, 'clinic_id');
+    }
+
 }

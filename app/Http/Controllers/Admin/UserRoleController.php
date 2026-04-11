@@ -46,7 +46,7 @@ class UserRoleController extends Controller
             }
             if ($q !== '') {
                 $allUsers = $allUsers->filter(function ($user) use ($q) {
-                    return (stripos($user['name'] ?? '', $q) !== false) || (stripos($user['email'] ?? '', $q) !== false);
+                    return (stripos($user->name ?? '', $q) !== false) || (stripos($user->email ?? '', $q) !== false);
                 })->values();
             }
             if ($status && $status !== 'all') {
@@ -80,8 +80,14 @@ class UserRoleController extends Controller
 
 
 
-    public function edit(User $user)
+    // Busca usuario en Firestore por docId
+    public function edit($userId)
     {
+        $userData = app(\App\Services\Firestore\UsersFirestoreService::class)->getUserByDocId($userId);
+        if (!$userData) {
+            return back()->withErrors(['user' => 'Usuario no encontrado.']);
+        }
+        $user = new \App\Models\FirestoreAuthenticatableUser($userData);
         $roles = collect([
             (object) ['name' => 'admin'],
             (object) ['name' => 'veterinario'],
@@ -89,7 +95,6 @@ class UserRoleController extends Controller
             (object) ['name' => 'ciudadano'],
         ]);
         $currentRole = $user->getRoleNames()->first();
-
         return view('admin.users.edit-role', compact('user', 'roles', 'currentRole'));
     }
 
@@ -176,12 +181,18 @@ public function reject($userId)
         if (auth()->id() === $userId) {
             return back()->withErrors(['user' => 'No puedes eliminar tu propio usuario.']);
         }
-        app(\App\Services\Firestore\UsersFirestoreService::class)->updateUserFields($userId, ['deleted_at' => now()->toIso8601String()]);
-        return redirect()->route('admin.users.index')->with('success', 'Usuario eliminado.');
+        app(\App\Services\Firestore\UsersFirestoreService::class)->updateUserFields($userId, [
+            'deleted_at' => now()->toIso8601String(),
+            'status' => 'inactive',
+        ]);
+        return redirect()->route('admin.users.index')->with('success', 'Usuario desactivado.');
 }
     public function restore($userId)
     {
-        app(\App\Services\Firestore\UsersFirestoreService::class)->updateUserFields($userId, ['deleted_at' => null]);
+        app(\App\Services\Firestore\UsersFirestoreService::class)->updateUserFields($userId, [
+            'deleted_at' => null,
+            'status' => 'active',
+        ]);
         return redirect()->route('admin.users.index')->with('success', 'Usuario restaurado.');
     }
 

@@ -7,16 +7,26 @@ use Illuminate\Support\Facades\Schema;
 
 class MedicalService extends Model
 {
-    protected $fillable = ['name','type','created_by','is_active'];
+    protected $fillable = [
+        'name',
+        'description',
+        'base_price',
+        'duration_minutes',
+        'clinic_id',
+        'vet_id',
+        'type',
+        'created_by',
+        'is_active',
+    ];
 
-    public function clinics()
+    public function clinic()
     {
-        $pivotTable = Schema::hasTable('clinic_medical_service')
-            ? 'clinic_medical_service'
-            : 'clinic_services';
+        return $this->belongsTo(Clinic::class, 'clinic_id');
+    }
 
-        return $this->belongsToMany(Clinic::class, $pivotTable)
-            ->withTimestamps();
+    public function vet()
+    {
+        return $this->belongsTo(User::class, 'vet_id');
     }
 }
 

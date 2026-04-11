@@ -136,14 +136,12 @@
                                       {{ strtoupper($t['status'] ?? '—') }}
                                   </span>
                               </td>
-                                <!--
                               <td class="p-4 text-right">
-                                  <a class="inline-flex items-center justify-center px-4 py-2 rounded-full font-bold border transition bg-white text-slate-900 border-slate-200 hover:bg-slate-50 opacity-50 cursor-not-allowed"
-                                    href="#">
+                                  <a class="inline-flex items-center justify-center px-4 py-2 rounded-full font-bold border transition bg-white text-slate-900 border-slate-200 hover:bg-slate-50"
+                                    href="{{ route('admin.tickets.show', $t['id']) }}">
                                       Ver
                                   </a>
                               </td>
-                                -->
                           </tr>
                       @endforeach
                   @else

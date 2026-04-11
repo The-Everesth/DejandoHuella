@@ -145,7 +145,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tickets/{ticket}', [SupportTicketController::class, 'show'])->name('tickets.show');
 
     // ADMIN (un solo bloque)
-    Route::middleware(['role:admin'])
+    Route::middleware(['web', 'role:admin'])
         ->prefix('admin')
         ->name('admin.')
         ->group(function () {
@@ -173,6 +173,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             // Tickets admin
             Route::get('/tickets', [SupportTicketAdminController::class, 'index'])->name('tickets.index');
+            // Ruta para admins: ver cualquier ticket por ID
             Route::get('/tickets/{ticket}', [SupportTicketAdminController::class, 'show'])->name('tickets.show');
             Route::post('/tickets/{ticket}/reply', [SupportTicketAdminController::class, 'reply'])->name('tickets.reply');
             Route::post('/tickets/{ticket}/close', [SupportTicketAdminController::class, 'close'])->name('tickets.close');
@@ -188,8 +189,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('vet.')
         ->group(function () {
             Route::resource('clinics', ClinicController::class);
-            Route::get('clinics/{clinic}/services', [ClinicServiceController::class, 'edit'])->name('clinics.services.edit');
-            Route::post('clinics/{clinic}/services', [ClinicServiceController::class, 'update'])->name('clinics.services.update');
+
+            // Gestión de servicios médicos por veterinario
+            // Servicios globales del veterinario
+            Route::prefix('services')->name('services.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Vet\VetServiceController::class, 'index'])->name('index');
+                Route::get('/create', [\App\Http\Controllers\Vet\VetServiceController::class, 'create'])->name('create');
+                Route::post('/', [\App\Http\Controllers\Vet\VetServiceController::class, 'store'])->name('store');
+                Route::get('/{service}/edit', [\App\Http\Controllers\Vet\VetServiceController::class, 'edit'])->name('edit');
+                Route::put('/{service}', [\App\Http\Controllers\Vet\VetServiceController::class, 'update'])->name('update');
+                Route::delete('/{service}', [\App\Http\Controllers\Vet\VetServiceController::class, 'destroy'])->name('destroy');
+            });
+
+            // Asignación de servicios a clínicas
+            Route::get('clinics/{clinic}/assign-services', [\App\Http\Controllers\Vet\ClinicAssignServiceController::class, 'edit'])->name('clinics.assign_services.edit');
+            Route::post('clinics/{clinic}/assign-services', [\App\Http\Controllers\Vet\ClinicAssignServiceController::class, 'update'])->name('clinics.assign_services.update');
+            Route::prefix('clinics/{clinic}/services')->name('clinics.services.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Vet\ClinicMedicalServiceController::class, 'index'])->name('index');
+                Route::get('/create', [\App\Http\Controllers\Vet\ClinicMedicalServiceController::class, 'create'])->name('create');
+                Route::post('/', [\App\Http\Controllers\Vet\ClinicMedicalServiceController::class, 'store'])->name('store');
+                Route::get('/{service}/edit', [\App\Http\Controllers\Vet\ClinicMedicalServiceController::class, 'edit'])->name('edit');
+                Route::put('/{service}', [\App\Http\Controllers\Vet\ClinicMedicalServiceController::class, 'update'])->name('update');
+                Route::delete('/{service}', [\App\Http\Controllers\Vet\ClinicMedicalServiceController::class, 'destroy'])->name('destroy');
+            });
 
             Route::get('appointments', [AppointmentController::class, 'vetAppointments'])->name('appointments.index');
             Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'setStatus'])->name('appointments.status');

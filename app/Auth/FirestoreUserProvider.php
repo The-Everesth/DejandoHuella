@@ -42,7 +42,10 @@ class FirestoreUserProvider implements UserProvider
         }
         $users = $this->firestore->list();
         foreach ($users as $data) {
-            if (isset($data['email']) && strtolower($data['email']) === strtolower($credentials['email'])) {
+            if (
+                isset($data['email']) && strtolower($data['email']) === strtolower($credentials['email']) &&
+                (isset($data['status']) ? $data['status'] === 'active' : true)
+            ) {
                 return new FirestoreAuthenticatableUser($data);
             }
         }

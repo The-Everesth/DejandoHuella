@@ -80,10 +80,10 @@
                                 @endif
 
                             {{-- Links por rol (en dropdown para mantener el estilo del figma limpio) --}}
+
                             @role('admin')
                                 <x-dropdown-link :href="route('admin.dashboard')">Admin Panel</x-dropdown-link>
                                 <x-dropdown-link :href="route('admin.users.index')">Usuarios</x-dropdown-link>
-                                <x-dropdown-link :href="route('admin.services.index')">Servicios</x-dropdown-link>
                                 <x-dropdown-link :href="route('admin.tickets.index')">Tickets</x-dropdown-link>
                                 <x-dropdown-link :href="route('admin.adoptions.index')">Gestión de adopciones</x-dropdown-link>
                             @endrole
@@ -91,8 +91,10 @@
                             @role('veterinario')
                                 <x-dropdown-link :href="route('vet.my.adoptions')">Mis adopciones</x-dropdown-link>
                                 <x-dropdown-link :href="route('vet.clinics.index')">Mis Clínicas</x-dropdown-link>
+                                <x-dropdown-link :href="route('vet.services.index')">Mis servicios</x-dropdown-link>
                                 <x-dropdown-link :href="route('vet.appointments.index')">Citas</x-dropdown-link>
                                 <x-dropdown-link :href="route('my.published.requests')">Solicitudes de adopción</x-dropdown-link>
+                                <!--<x-dropdown-link :href="route('vet.clinics.index')">Gestionar servicios médicos</x-dropdown-link>-->
                             @endrole
 
                             @role('refugio')
@@ -119,10 +121,10 @@
 
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
-                                <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault(); this.closest('form').submit();">
+                                <button type="submit"
+                                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                     Cerrar sesión
-                                </x-dropdown-link>
+                                </button>
                             </form>
                         </x-slot>
                     </x-dropdown>
@@ -166,7 +168,7 @@
                     <div class="border-t border-white/10 my-2"></div>
                     <a class="block py-2" href="{{ route('admin.dashboard') }}">Admin Panel</a>
                     <a class="block py-2" href="{{ route('admin.users.index') }}">Usuarios</a>
-                    <a class="block py-2" href="{{ route('admin.services.index') }}">Servicios</a>
+                    {{-- <a class="block py-2" href="{{ route('admin.services.index') }}">Servicios</a> --}}
                     <a class="block py-2" href="{{ route('admin.tickets.index') }}">Tickets</a>
                     <a class="block py-2" href="{{ route('admin.adoptions.index') }}">Gestión de adopciones</a>
                 @endrole

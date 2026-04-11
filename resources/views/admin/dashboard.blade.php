@@ -14,7 +14,7 @@
                 {{ $usersCount ?? '—' }}
             </div>
         </x-card>
-
+        <!--
         <x-card>
             <div class="text-sm text-gray-500 font-semibold">Solicitudes de rol pendientes</div>
             <div class="text-3xl font-extrabold text-yellow-600 mt-2">
@@ -28,7 +28,7 @@
                 {{ $openTickets ?? '—' }}
             </div>
         </x-card>
-
+-->
     </div>
 
     <div class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
