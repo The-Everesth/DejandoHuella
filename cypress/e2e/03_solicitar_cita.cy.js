@@ -7,7 +7,7 @@ describe('Solicitud de cita', () => {
     d.setDate(d.getDate() + 1)
     const date = d.toISOString().slice(0, 10)
     // Visitar la página de citas
-    cy.visit(`/appointments/create/c_7/srv_consulta?date=${date}`)
+    cy.visit(`/appointments/create/clinic_u_rwA6vPBnxRYiFa7ED6xG/B716pI2PcWd0J0FQ4pHv?date=${date}`)
 
     //Se ingresa al formulario de citas
     const apptForm = () =>
@@ -23,18 +23,16 @@ describe('Solicitud de cita', () => {
       cy.intercept('POST', action).as('storeAppointment')
     })
 
-    // Validar horarios disponibles
-    cy.get('select[name="start_at"] option').then($opts => {
-      const values = [...$opts].map(o => o.value)
-      if (values.length === 1 && (values[0] === '' || values[0] == null)) {
-        throw new Error('No hay horarios disponibles para la fecha elegida.')
-      }
-    })
+    // Validar horarios disponibles (radio buttons)
+    cy.get('input[type="radio"][name="start_at"]').should('exist')
+    // Seleccionar el primer horario disponible
+    cy.get('input[type="radio"][name="start_at"]').first().check({ force: true })
 
     // Llenar campos requeridos
-    cy.get('select[name="pet_id"]').select(0)
+    cy.get('select[name="pet_id"] option:not([disabled])').eq(1).then($option => {
+      cy.get('select[name="pet_id"]').select($option.val())
+    })
     cy.get('input[name="contact"]').clear().type(`cypress_${Date.now()}@mail.com`)
-    cy.get('select[name="start_at"]').select(0)
     cy.get('textarea[name="notes"]').type('Cita generada por Cypress.')
 
     // Submit del form de citas
