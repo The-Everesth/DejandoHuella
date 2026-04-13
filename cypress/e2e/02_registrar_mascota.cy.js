@@ -16,7 +16,7 @@ describe('Registro de mascota', () => {
     cy.get('input[name="breed"]').type('Labrador')
     cy.get('input[name="ageYears"]').type('2')
     cy.get('textarea[name="notes"]').type('Registro Cypress')
-    cy.get('button[type="submit"]').click()
+    cy.contains('button[type="submit"]', 'Registrar mascota').click()
     cy.visit('/my/pets')
 
     // Validar que la mascota se haya registrado correctamente
